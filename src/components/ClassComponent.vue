@@ -45,9 +45,14 @@
     >
       <template v-slot:body="props">
         <q-tr :props="props">
-          <!-- <q-td key="tweet_id" :props="props">
-            {{ props.row.tweet_id }}
-          </q-td> -->
+          <q-td key="tweet_id" :props="props">
+            <q-btn
+              round
+              color="deep-orange"
+              @click="deleteTweet(props)"
+              icon="delete"
+            />
+          </q-td>
           <q-td key="tweet" :props="props">
             {{ props.row.tweet }}
             <q-popup-edit v-model="props.row.tweet">
@@ -56,13 +61,17 @@
           </q-td>
           <q-td key="date" :props="props">
             {{ props.row.date }}
-            <q-popup-edit v-model="props.row.date" title="Update date" buttons>
-              <q-date v-model="props.row.date" />
+            <q-popup-edit v-model="props.row.date" title="Update date">
+              <q-date
+                :options="optionsFn"
+                @update:model-value="refreshData(props)"
+                v-model="props.row.date"
+              />
             </q-popup-edit>
           </q-td>
           <q-td key="time" :props="props">
             {{ props.row.time }}
-            <q-popup-edit v-model="props.row.time" title="Update time" buttons>
+            <q-popup-edit v-model="props.row.time" title="Update time">
               <q-time v-model="props.row.time" format24h />
             </q-popup-edit>
           </q-td>
@@ -76,6 +85,7 @@
 import { useQuasar } from "quasar";
 import { Vue, prop } from "vue-class-component";
 import { Todo, Meta } from "./models";
+import { computed, ComputedRef } from "vue";
 
 class Props {
   readonly title!: string;
@@ -91,9 +101,16 @@ export default class ClassComponent extends Vue.with(Props) {
   tweet: string = "";
   days = [];
   time = "12:00";
-  events = [];
+  events: any[] = [];
   rows: any = [];
   columns = [
+    {
+      name: "tweet_id",
+      required: true,
+      label: "Delete",
+      align: "left",
+      field: (row: any) => row.tweet_id,
+    },
     {
       name: "tweet",
       required: true,
@@ -128,7 +145,26 @@ export default class ClassComponent extends Vue.with(Props) {
   onReset() {
     this.tweet = "";
   }
+  refreshData(props: any) {
+    setTimeout(() => {
+      const row: any = props.row;
+      const rowIndex: number = props.rowIndex;
+      this.events[rowIndex] = row.date;
+    }, 100);
+  }
+  deleteTweet(props: any) {
+    const rowIndex: number = props.rowIndex;
+    this.events.splice(rowIndex, 1);
+    this.rows.splice(rowIndex, 1);
+    this.showNotif(props.row.tweet);
+  }
 
+  showNotif(tweet: string) {
+    this.$q.notify({
+      message: "Deleted - " + tweet,
+      color: "negative"
+    });
+  }
   formatDate() {
     // let d = new Date(day);
     // let h = this.time.split(":")[0];
@@ -137,14 +173,14 @@ export default class ClassComponent extends Vue.with(Props) {
 
   onSubmit() {
     this.days.forEach((day) => {
-      this.rows.push({
+      this.rows.unshift({
         tweet_id: new Date().getTime(),
         tweet: this.tweet,
         date: day,
         time: this.time,
       });
     });
-    this.events.push(...this.days);
+    this.events.unshift(...this.days);
     this.days = [];
     this.time = "12:00";
     this.tweet = "";
