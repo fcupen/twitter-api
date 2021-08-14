@@ -61,18 +61,21 @@
           </q-td>
           <q-td key="date" :props="props">
             {{ props.row.date }}
-            <q-popup-edit v-model="props.row.date" title="Update date">
+          </q-td>
+          <q-td key="qdate" :props="props">
+            {{ props.row.qdate }}
+            <q-popup-edit v-model="props.row.qdate" title="Update date">
               <q-date
                 :options="optionsFn"
                 @update:model-value="refreshData(props)"
-                v-model="props.row.date"
+                v-model="props.row.qdate"
               />
             </q-popup-edit>
           </q-td>
-          <q-td key="time" :props="props">
-            {{ props.row.time }}
-            <q-popup-edit v-model="props.row.time" title="Update time">
-              <q-time v-model="props.row.time" format24h />
+          <q-td key="qtime" :props="props">
+            {{ props.row.qtime }}
+            <q-popup-edit v-model="props.row.qtime" title="Update time">
+              <q-time v-model="props.row.qtime" format24h />
             </q-popup-edit>
           </q-td>
         </q-tr>
@@ -128,10 +131,17 @@ export default class ClassComponent extends Vue.with(Props) {
       sortable: true,
     },
     {
-      name: "time",
+      name: "qdate",
       align: "center",
-      label: "time",
-      field: "time",
+      label: "qdate",
+      field: "qdate",
+      sortable: true,
+    },
+    {
+      name: "qtime",
+      align: "center",
+      label: "qtime",
+      field: "qtime",
       sortable: true,
     },
   ];
@@ -149,41 +159,116 @@ export default class ClassComponent extends Vue.with(Props) {
     setTimeout(() => {
       const row: any = props.row;
       const rowIndex: number = props.rowIndex;
-      this.events[rowIndex] = row.date;
+      // this.events[rowIndex] = row.date;
+      fetch("http://localhost:3000/api/" + rowIndex, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...row,
+          date: this.formatAllDate(row.qdate, row.qtime),
+        }),
+      })
+        .then((response) => response.json())
+        .then((d) => {
+          this.events = [];
+          d.tweets.forEach((t: any) => {
+            this.events.push(t.qdate);
+          });
+          this.rows = d.tweets;
+        });
     }, 100);
   }
   deleteTweet(props: any) {
     const rowIndex: number = props.rowIndex;
     this.events.splice(rowIndex, 1);
     this.rows.splice(rowIndex, 1);
-    this.showNotif(props.row.tweet);
+
+    fetch("http://localhost:3000/api/" + rowIndex, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+      .then((response) => response.json())
+      .then((d) => {
+        this.events = [];
+        d.tweets.forEach((t: any) => {
+          this.events.push(t.qdate);
+        });
+        this.rows = d.tweets;
+        this.showNotif(props.row.tweet);
+      });
   }
 
   showNotif(tweet: string) {
     this.$q.notify({
       message: "Deleted - " + tweet,
-      color: "negative"
+      color: "negative",
     });
   }
-  formatDate() {
-    // let d = new Date(day);
-    // let h = this.time.split(":")[0];
-    // let m = this.time.split(":")[1];
+  formatDate(date: any) {
+    let d = date.split("/").join("-");
+    let h = this.time.split(":")[0];
+    let m = this.time.split(":")[1];
+    return new Date(`${d}T${h}:${m}:00.000Z`).toISOString();
+  }
+  formatAllDate(date: any, time: any) {
+    let d = date.split("/").join("-");
+    let h = time.split(":")[0];
+    let m = time.split(":")[1];
+    return new Date(`${d}T${h}:${m}:00.000Z`).toISOString();
   }
 
   onSubmit() {
+    let rows: any = [];
     this.days.forEach((day) => {
-      this.rows.unshift({
+      rows.unshift({
         tweet_id: new Date().getTime(),
         tweet: this.tweet,
-        date: day,
-        time: this.time,
+        date: this.formatDate(day),
+        qdate: day,
+        qtime: this.time,
       });
     });
-    this.events.unshift(...this.days);
     this.days = [];
     this.time = "12:00";
     this.tweet = "";
+    fetch("http://localhost:3000/api/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(rows),
+    })
+      .then((response) => response.json())
+      .then((d) => {
+        this.events = [];
+        d.tweets.forEach((t: any) => {
+          this.events.push(t.qdate);
+        });
+        this.rows = d.tweets;
+      });
+  }
+
+  refreshTweets() {
+    fetch("http://localhost:3000/api/", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+      .then((response) => response.json())
+      .then((d) => {
+        d.tweets.forEach((t: any) => {
+          this.events.push(t.qdate);
+        });
+        this.rows = d.tweets;
+      });
+  }
+  created() {
+    this.refreshTweets();
   }
 }
 </script>

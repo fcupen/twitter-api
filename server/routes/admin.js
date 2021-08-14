@@ -16,7 +16,8 @@ router.get("/", (req, res, next) => {
 
     const max = data_json.tweets.reduce((p, n) => {
       return timezoneOffset(new Date(n.date)).getTime() > p ? timezoneOffset(new Date(n.date)).getTime() : p;
-    }, -Infinity);
+    }, -Infinity) + (10*60*1000);
+
 
     res.render("index", {
       title: "Express",

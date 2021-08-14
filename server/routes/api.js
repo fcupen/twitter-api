@@ -14,10 +14,11 @@ router.post("/", function (req, res, next) {
   var tweet = req.body;
   fs.readFile("./db/db.json", (err, data) => {
     let tweets = JSON.parse(data).tweets;
-    tweets.tweets.unshift(tweet);
-    fs.writeFile("./db/db.json", JSON.stringify({ tweets:tweets.tweets }), (err) => {
+    console.log(tweets)
+    tweets.unshift(...tweet);
+    fs.writeFile("./db/db.json", JSON.stringify({ tweets:tweets }), (err) => {
       if (err) throw err;
-      res.json(tweets);
+      res.json({ tweets:tweets });
     });
   });
 });
@@ -30,7 +31,7 @@ router.put("/:id", function (req, res, next) {
     tweets[Number(id)] = tweet;
     fs.writeFile("./db/db.json", JSON.stringify({ tweets }), (err) => {
       if (err) throw err;
-      res.json(tweets);
+      res.json({ tweets });
     });
   });
 });
@@ -42,7 +43,7 @@ router.delete("/:id", function (req, res, next) {
     tweets.tweets.splice(id, 1);
     fs.writeFile("./db/db.json", JSON.stringify({ tweets:tweets.tweets }), (err) => {
       if (err) throw err;
-      res.json(tweets);
+      res.json({ tweets:tweets.tweets });
     });
   });
 });

@@ -12,6 +12,10 @@
     <!-- Compiled and minified JavaScript -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
 
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet"
+    />
     <style>
       /*Chrome*/
       @media screen and (-webkit-min-device-pixel-ratio: 0) {
@@ -41,9 +45,26 @@
       input[type="range"]::-ms-fill-upper {
         background-color: #9a905d;
       }
+
+      .flex {
+        display: flex;
+      }
+      .full-width {
+        width: 100%;
+      }
     </style>
 
     <script>
+      function deleteTweet(id) {
+        fetch("http://localhost:3000/api/" + id, {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }).then((d) => {
+          location.reload();
+        });
+      }
       function timezoneOffset(d) {
         d.setTime(d.getTime() + d.getTimezoneOffset() * 60 * 1000);
         return d;
@@ -84,35 +105,17 @@
         >
       </div>
     </nav>
-    <!-- <div class="section no-pad-bot" id="index-banner">
-      <div class="container">
-        <br /><br />
-        <h1 class="header center orange-text">Starter Template</h1>
-        <div class="row center">
-          <h5 class="header col s12 light">
-            A modern responsive front-end framework based on Material Design
-          </h5>
-        </div>
-        <div class="row center">
-          <a
-            href="http://materializecss.com/getting-started.html"
-            id="download-button"
-            class="btn-large waves-effect waves-light orange"
-            >Get Started</a
-          >
-        </div>
-        <br /><br />
-      </div>
-    </div> -->
-
     <div class="container">
       <div class="section">
         <div class="row">
           <% tweets.forEach((data, i) => { %>
           <div class="col s12 m12">
             <div class="icon-block">
-              <h2 class="center light-blue-text"><%- i+1 %></h2>
-              <h5 class="center"><%- data.tweet.tweet %></h5>
+              <div class="full-width flex">
+                <h5 class="center light-blue-text"><%- i+1 %></h5>
+                <p class="center"><%- data.tweet.tweet %></p>
+                <p class="light center"><%- data.date %></p>
+              </div>
               <div style="display: flex">
                 <input
                   style="width: 100%"
@@ -125,8 +128,11 @@
                 />
                 <span id="id-perc-<%- i %>"></span>
               </div>
-              <p class="light center"><%- data.date %></p>
-
+              <div class="flex full-width">
+                <i class="material-icons" onclick="deleteTweet('<%- i %>')"
+                  >delete</i
+                >
+              </div>
               <script>
                 refreshTime(
                   "<%- i %>",
