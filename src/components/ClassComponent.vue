@@ -10,28 +10,24 @@
             hint="Max 160"
             maxlength="160"
             lazy-rules
-            :rules="[
-              (val) => (val && val.length > 0) || 'Please tweet something',
-            ]"
+            :rules="[(val) => (val && val.length > 0) || 'Please tweet something']"
           />
           <div class="w100 flex" style="justify-content: space-around">
-            <q-date
-              v-model="days"
-              multiple
-              :events="events"
-              :options="optionsFn"
-            />
+            <q-date v-model="days" multiple :events="events" :options="optionsFn" />
             <q-time v-model="time" format24h />
           </div>
           <div>
             <q-btn label="Submit" type="submit" color="primary" />
+            <q-btn label="Reset" type="reset" color="primary" flat class="q-ml-sm" />
             <q-btn
-              label="Reset"
-              type="reset"
+              label="Star Tweet"
+              type="button"
+              @click="starTweet()"
               color="primary"
               flat
               class="q-ml-sm"
             />
+            is started: {{ startedTweet }}
           </div>
         </q-form>
       </div>
@@ -46,12 +42,7 @@
       <template v-slot:body="props">
         <q-tr :props="props">
           <q-td key="tweet_id" :props="props">
-            <q-btn
-              round
-              color="deep-orange"
-              @click="deleteTweet(props)"
-              icon="delete"
-            />
+            <q-btn round color="deep-orange" @click="deleteTweet(props)" icon="delete" />
           </q-td>
           <q-td key="tweet" :props="props">
             {{ props.row.tweet }}
@@ -102,6 +93,7 @@ export default class ClassComponent extends Vue.with(Props) {
   accept = false;
   $q = useQuasar();
   tweet: string = "";
+  startedTweet = false;
   days = [];
   time = "12:00";
   events: any[] = [];
@@ -147,7 +139,7 @@ export default class ClassComponent extends Vue.with(Props) {
   ];
 
   optionsFn(date: any) {
-    return new Date(date).getTime() >= new Date().getTime();
+    return true; //new Date(date).getTime() >= new Date().getTime();
   }
   increment() {
     this.clickCount += 1;
@@ -215,10 +207,14 @@ export default class ClassComponent extends Vue.with(Props) {
     return new Date(`${d}T${h}:${m}:00.000Z`).toISOString();
   }
   formatAllDate(date: any, time: any) {
-    let d = date.split("/").join("-");
-    let h = time.split(":")[0];
-    let m = time.split(":")[1];
-    return new Date(`${d}T${h}:${m}:00.000Z`).toISOString();
+    let res = "";
+    try {
+      let d = date.split("/").join("-");
+      let h = time.split(":")[0];
+      let m = time.split(":")[1];
+      res = new Date(`${d}T${h}:${m}:00.000Z`).toISOString();
+    } catch (error) {}
+    return res;
   }
 
   onSubmit() {
@@ -269,6 +265,30 @@ export default class ClassComponent extends Vue.with(Props) {
   }
   created() {
     this.refreshTweets();
+  }
+  starTweet() {
+    const timezone = 1000 * 60 * 60;
+    this.startedTweet = true;
+    setInterval(() => {
+      this.rows.forEach((t: any, i: number) => {
+        const left = new Date(t.date).getTime() - new Date().getTime() - timezone;
+        if (left < 0 && left + 1000 * 60 * 10 > 0) {
+          fetch("http://localhost:3000/twitter/", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ tweet: t.tweet }),
+          })
+            .then((response) => response.json())
+            .then((d) => {
+              console.log(d);
+              this.deleteTweet({ rowIndex: i, row: { tweet: t.tweet } });
+            });
+        }
+      });
+      console.log(this.rows[0].date);
+    }, 10000);
   }
 }
 </script>
