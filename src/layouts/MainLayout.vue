@@ -11,7 +11,7 @@
           @click="toggleLeftDrawer"
         />
 
-        <q-toolbar-title>Twitter Tool </q-toolbar-title>
+        <q-toolbar-title>Social Networks Tool </q-toolbar-title>
 
         <div></div>
       </q-toolbar>
@@ -56,6 +56,16 @@ const linksList = [
     title: "Twitter",
     caption: "Set tweets",
     icon: "fab fa-twitter",
+  },
+  {
+    title: "Instagram",
+    caption: "Set tweets",
+    icon: "fab fa-instagram",
+  },
+  {
+    title: "Stories",
+    caption: "Set tweets",
+    icon: "fas fa-swatchbook",
   },
 ];
 

@@ -7,6 +7,10 @@
     "start-watch": "nodemon ./bin/www"
   },
   "dependencies": {
+    "@lifeomic/attempt": "^3.0.1",
+    "bluebird": "^3.7.2",
+    "chance": "^1.1.8",
+    "class-transformer": "^0.5.1",
     "cookie-parser": "~1.4.4",
     "date-fns": "^2.23.0",
     "debug": "~2.6.9",
@@ -14,9 +18,24 @@
     "ejs": "~2.6.1",
     "express": "~4.16.1",
     "http-errors": "~1.6.3",
+    "image-size": "^1.0.0",
+    "is-url": "^1.2.4",
+    "json-bigint": "^1.0.0",
+    "lodash": "^4.17.21",
+    "luxon": "^2.2.0",
     "morgan": "~1.9.1",
+    "multer": "^1.4.4",
     "node-cron": "^3.0.0",
     "nodemon": "^2.0.15",
-    "twitter": "^1.7.1"
+    "request": "^2.88.2",
+    "request-promise": "^4.2.6",
+    "request-promise-native": "^1.0.9",
+    "snakecase-keys": "^5.1.2",
+    "tough-cookie": "^4.0.0",
+    "ts-custom-error": "^3.2.0",
+    "twit": "^2.2.11",
+    "twitter": "^1.7.1",
+    "url-regex": "^5.0.0",
+    "useragent-from-seed": "^1.0.1"
   }
 }

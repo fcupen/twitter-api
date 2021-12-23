@@ -16,13 +16,14 @@
             <q-date v-model="days" multiple :events="events" :options="optionsFn" />
             <q-time v-model="time" format24h />
           </div>
+          <q-file filled v-model="file" label="Filled" />
           <div>
             <q-btn label="Submit" type="submit" color="primary" />
             <q-btn label="Reset" type="reset" color="primary" flat class="q-ml-sm" />
             <q-btn
-              label="Star Tweet"
+              label="Star Timer"
               type="button"
-              @click="starTweet()"
+              @click="starTimer()"
               color="primary"
               flat
               class="q-ml-sm"
@@ -43,6 +44,12 @@
         <q-tr :props="props">
           <q-td key="tweet_id" :props="props">
             <q-btn round color="deep-orange" @click="deleteTweet(props)" icon="delete" />
+            <q-btn
+              round
+              color="deep-orange"
+              @click="submit(props.row, props.rowIndex)"
+              icon="send"
+            />
           </q-td>
           <q-td key="tweet" :props="props">
             {{ props.row.tweet }}
@@ -91,6 +98,7 @@ class Props {
 export default class ClassComponent extends Vue.with(Props) {
   clickCount = 0;
   accept = false;
+  file: any;
   $q = useQuasar();
   tweet: string = "";
   startedTweet = false;
@@ -219,33 +227,71 @@ export default class ClassComponent extends Vue.with(Props) {
 
   onSubmit() {
     let rows: any = [];
-    this.days.forEach((day) => {
-      rows.unshift({
-        tweet_id: new Date().getTime(),
-        tweet: this.tweet,
-        date: this.formatDate(day),
-        qdate: day,
-        qtime: this.time,
-      });
-    });
-    this.days = [];
-    this.time = "12:00";
-    this.tweet = "";
-    fetch("http://localhost:3000/api/", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(rows),
-    })
-      .then((response) => response.json())
-      .then((d) => {
-        this.events = [];
-        d.tweets.forEach((t: any) => {
-          this.events.push(t.qdate);
+    if (this.file) {
+      var reader = new FileReader();
+      reader.readAsDataURL(this.file);
+      reader.onload = () => {
+        this.days.forEach((day) => {
+          rows.unshift({
+            tweet_id: new Date().getTime(),
+            tweet: this.tweet,
+            date: this.formatDate(day),
+            qdate: day,
+            qtime: this.time,
+            file: this.file ? reader.result : null,
+          });
         });
-        this.rows = d.tweets;
+        this.days = [];
+        this.time = "12:00";
+        this.tweet = "";
+        fetch("http://localhost:3000/api/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(rows),
+        })
+          .then((response) => response.json())
+          .then((d) => {
+            this.events = [];
+            d.tweets.forEach((t: any) => {
+              this.events.push(t.qdate);
+            });
+            this.rows = d.tweets;
+          });
+      };
+      reader.onerror = (error) => {
+        console.log("Error: ", error);
+      };
+    } else {
+      this.days.forEach((day) => {
+        rows.unshift({
+          tweet_id: new Date().getTime(),
+          tweet: this.tweet,
+          date: this.formatDate(day),
+          qdate: day,
+          qtime: this.time,
+        });
       });
+      this.days = [];
+      this.time = "12:00";
+      this.tweet = "";
+      fetch("http://localhost:3000/api/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(rows),
+      })
+        .then((response) => response.json())
+        .then((d) => {
+          this.events = [];
+          d.tweets.forEach((t: any) => {
+            this.events.push(t.qdate);
+          });
+          this.rows = d.tweets;
+        });
+    }
   }
 
   refreshTweets() {
@@ -266,29 +312,114 @@ export default class ClassComponent extends Vue.with(Props) {
   created() {
     this.refreshTweets();
   }
-  starTweet() {
+  starTimer() {
     const timezone = 1000 * 60 * 60;
     this.startedTweet = true;
     setInterval(() => {
       this.rows.forEach((t: any, i: number) => {
         const left = new Date(t.date).getTime() - new Date().getTime() - timezone;
         if (left < 0 && left + 1000 * 60 * 10 > 0) {
-          fetch("http://localhost:3000/twitter/", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ tweet: t.tweet }),
-          })
-            .then((response) => response.json())
-            .then((d) => {
-              console.log(d);
-              this.deleteTweet({ rowIndex: i, row: { tweet: t.tweet } });
-            });
+          if (t.file) {
+            var formData = new FormData();
+            formData.append("tweet", t.tweet);
+            formData.append("altText", t.tweet);
+            // HTML file input user's choice...
+            formData.append("media_data", t.file);
+            var request = new XMLHttpRequest();
+            request.open("POST", "http://localhost:3000/twitter/media");
+            request.onreadystatechange = () => {
+              if (request.readyState === XMLHttpRequest.DONE && request.status === 200) {
+                this.deleteTweet({ rowIndex: i, row: { tweet: t.tweet } });
+              }
+            };
+            request.send(formData);
+
+            var formData2 = new FormData();
+            formData2.append("tweet", t.tweet);
+            formData2.append("media_data", t.file);
+            var request2 = new XMLHttpRequest();
+            request2.open("POST", "http://localhost:3000/instagram/post-photo");
+            request2.onreadystatechange = () => {
+              if (
+                request2.readyState === XMLHttpRequest.DONE &&
+                request2.status === 200
+              ) {
+                // SUCCESS
+              }
+            };
+            request2.send(formData2);
+          } else {
+            fetch("http://localhost:3000/twitter", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ tweet: t.tweet }),
+            })
+              .then((response) => response.json())
+              .then((d) => {
+                this.deleteTweet({ rowIndex: i, row: { tweet: t.tweet } });
+              });
+          }
         }
       });
-      console.log(this.rows[0].date);
     }, 10000);
+  }
+  submit(t: any, i: number) {
+    if (t.file) {
+      var formData = new FormData();
+      formData.append("tweet", t.tweet);
+      formData.append("altText", t.tweet);
+      // HTML file input user's choice...
+      formData.append("media_data", t.file);
+      var request = new XMLHttpRequest();
+      request.open("POST", "http://localhost:3000/twitter/media");
+      request.onreadystatechange = () => {
+        if (request.readyState === XMLHttpRequest.DONE && request.status === 200) {
+          // this.deleteTweet({ rowIndex: i, row: { tweet: t.tweet } });
+        }
+      };
+      request.send(formData);
+
+      var formDataIG = new FormData();
+      formDataIG.append("tweet", t.tweet);
+      formDataIG.append("media_data", t.file);
+      var requestIG = new XMLHttpRequest();
+      requestIG.open("POST", "http://localhost:3000/instagram/post-photo");
+      requestIG.onreadystatechange = () => {
+        if (requestIG.readyState === XMLHttpRequest.DONE && requestIG.status === 200) {
+          // SUCCESS
+        }
+      };
+      requestIG.send(formDataIG);
+
+      var formDataSTORIES = new FormData();
+      formDataSTORIES.append("tweet", t.tweet);
+      formDataSTORIES.append("media_data", t.file);
+      var requestSTORIES = new XMLHttpRequest();
+      requestSTORIES.open("POST", "http://localhost:3000/instagram/post-story");
+      requestSTORIES.onreadystatechange = () => {
+        if (
+          requestSTORIES.readyState === XMLHttpRequest.DONE &&
+          requestSTORIES.status === 200
+        ) {
+          // SUCCESS
+        }
+      };
+      requestSTORIES.send(formDataSTORIES);
+    } else {
+      fetch("http://localhost:3000/twitter", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ tweet: t.tweet }),
+      })
+        .then((response) => response.json())
+        .then((d) => {
+          // this.deleteTweet({ rowIndex: i, row: { tweet: t.tweet } });
+        });
+    }
   }
 }
 </script>
