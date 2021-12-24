@@ -14,8 +14,10 @@
   "dependencies": {
     "@quasar/extras": "^1.0.0",
     "core-js": "^3.6.5",
+    "html2canvas": "^1.3.3",
     "quasar": "^2.0.0",
     "vue-class-component": "^8.0.0-rc.1",
+    "vue-html2canvas": "^0.0.4",
     "vuex": "^4.0.1"
   },
   "devDependencies": {

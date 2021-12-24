@@ -7,6 +7,8 @@ if (process.env.NODE_ENV !== "production") {
 }
 const multer = require("multer");
 const upload = multer();
+let streams = [];
+let tweetStreams = [];
 
 var Twitter = require("twitter");
 var client = new Twitter({
@@ -47,7 +49,7 @@ router.post("/media", upload.any(), (req, res, next) => {
   // console.log(req.body)
   T.post(
     "media/upload",
-    { media_data: req.body.media_data.split('base64,')[1] },
+    { media_data: req.body.media_data.split("base64,")[1] },
     function (err, data, response) {
       if (err) {
         res.json({ err, response, data });
@@ -102,21 +104,62 @@ router.post("/slug", (req, res, next) => {
   });
 });
 
+
 /* STREAM TWEET. */
-router.post("/stream", (req, res, next) => {
-  var stream = client.stream(
-    "statuses/filter",
-    // { track: "javascript" }
-    { follow: "876596261931155456" }
-  );
+router.get("/stream", (req, res, next) => {
+  res.json({ response: streams });
+});
+
+/* STREAM TWEET. */
+router.get("/stream/last", (req, res, next) => {
+  res.json({ response: tweetStreams });
+});
+
+/* STREAM TWEET. */
+router.post("/stream/:id", (req, res, next) => {
+  const id = req.params.id;
+  streams.push(id);
+  var stream = client.stream("statuses/filter", { follow: id });
   stream.on("data", function (event) {
-    console.log(event && event.text);
+    console.log(event);
+    tweetStreams.push(event);
   });
 
   stream.on("error", function (error) {
     throw error;
   });
+  res.json({ response: streams });
 });
+
+/* STREAM TWEET. */
+router.delete("/stream/:id", (req, res, next) => {
+  const id = req.params.id;
+  streams.splice(Number(id), 1);
+  res.json({ response: streams });
+});
+
+/* STREAM TWEET. */
+router.delete("/stream-tweet/:id", (req, res, next) => {
+  const id = req.params.id;
+  tweetStreams.splice(Number(id), 1);
+  res.json({ response: tweetStreams });
+});
+
+// /* STREAM TWEET. */
+// router.post("/stream", (req, res, next) => {
+//   var stream = client.stream(
+//     "statuses/filter",
+//     // { track: "javascript" }
+//     { follow: "876596261931155456" }
+//   );
+//   stream.on("data", function (event) {
+//     console.log(event && event.text);
+//   });
+
+//   stream.on("error", function (error) {
+//     throw error;
+//   });
+// });
 
 module.exports = router;
 

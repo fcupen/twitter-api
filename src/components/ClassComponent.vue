@@ -12,23 +12,37 @@
             lazy-rules
             :rules="[(val) => (val && val.length > 0) || 'Please tweet something']"
           />
+          <q-file filled v-model="file" label="Attached" />
           <div class="w100 flex" style="justify-content: space-around">
             <q-date v-model="days" multiple :events="events" :options="optionsFn" />
             <q-time v-model="time" format24h />
           </div>
-          <q-file filled v-model="file" label="Filled" />
-          <div>
+          <div class="w100 flex">
+            <q-checkbox
+              dense
+              v-model="instagramPost"
+              label="Instagram Post"
+              color="teal"
+            />
+            <q-checkbox
+              dense
+              v-model="instagramReel"
+              label="Instagram Reel"
+              color="orange"
+            />
+            <q-checkbox dense v-model="twitterPost" label="Twitter Post" color="red" />
+          </div>
+          <div class="w100 flex">
             <q-btn label="Submit" type="submit" color="primary" />
             <q-btn label="Reset" type="reset" color="primary" flat class="q-ml-sm" />
             <q-btn
-              label="Star Timer"
+              :label="startedTweet ? 'Stop Timer' : 'Star Timer'"
               type="button"
               @click="starTimer()"
               color="primary"
               flat
               class="q-ml-sm"
             />
-            is started: {{ startedTweet }}
           </div>
         </q-form>
       </div>
@@ -44,12 +58,7 @@
         <q-tr :props="props">
           <q-td key="tweet_id" :props="props">
             <q-btn round color="deep-orange" @click="deleteTweet(props)" icon="delete" />
-            <q-btn
-              round
-              color="deep-orange"
-              @click="submit(props.row, props.rowIndex)"
-              icon="send"
-            />
+            <q-btn round color="blue" @click="submit(props.row)" icon="send" />
           </q-td>
           <q-td key="tweet" :props="props">
             {{ props.row.tweet }}
@@ -79,15 +88,160 @@
         </q-tr>
       </template>
     </q-table>
+    <div class="w100 q-mt-md" style="display: flex">
+      <div class="w100">
+        <q-btn label="Get streams" type="button" color="primary" @click="getStream()" />
+      </div>
+      <div class="w100" style="display: flex">
+        <q-input filled v-model="ID_TWITTER" label="ID Twitter" />
+        <q-btn
+          label="Set Stream"
+          type="button"
+          @click="setStream(ID_TWITTER)"
+          color="primary"
+          flat
+          class="q-ml-sm"
+        />
+      </div>
+    </div>
+    <div
+      class="q-table__container q-table--horizontal-separator column no-wrap q-table__card q-table--no-wrap q-mt-md"
+    >
+      <table class="q-table">
+        <tr class="q-table__top" style="font-weight: bolder">
+          <td class="w100">Id</td>
+          <td></td>
+        </tr>
+        <tr
+          v-for="(stream, index) in streams"
+          v-bind:todo="stream"
+          v-bind:key="stream.id"
+        >
+          <td>{{ stream.id }}</td>
+          <td>
+            <q-btn
+              round
+              color="deep-orange"
+              @click="deleteAStream(index)"
+              icon="delete"
+            />
+          </td>
+        </tr>
+      </table>
+    </div>
+    <div class="w100 flex q-mt-md">
+      <q-btn
+        label="Get list tweets"
+        type="button"
+        @click="getListTweetStream()"
+        color="primary"
+        flat
+        class="q-ml-sm"
+      />
+    </div>
+    <div
+      class="q-table__container q-table--horizontal-separator column no-wrap q-table__card q-table--no-wrap q-mt-md"
+    >
+      <table class="q-table">
+        <tr class="q-table__top" style="font-weight: bolder">
+          <td>Id</td>
+          <td>Username</td>
+          <td>Followers</td>
+          <td>Following</td>
+          <td>Retweet</td>
+          <td>Like</td>
+          <td>Quote</td>
+          <td>Reply</td>
+          <td>Tweet</td>
+          <td></td>
+        </tr>
+        <tr v-for="(link, index) in listTweetStrem" :key="index" v-bind="link">
+          <td>{{ listTweetStrem[index].id }}</td>
+          <td>{{ listTweetStrem[index].user.screen_name }}</td>
+          <td>{{ listTweetStrem[index].user.followers_count }}</td>
+          <td>{{ listTweetStrem[index].user.friends_count }}</td>
+          <td>{{ listTweetStrem[index].retweet_count }}</td>
+          <td>{{ listTweetStrem[index].favorite_count }}</td>
+          <td>{{ listTweetStrem[index].quote_count }}</td>
+          <td>{{ listTweetStrem[index].reply_count }}</td>
+          <td>{{ listTweetStrem[index].text }}</td>
+          <td>
+            <q-btn
+              round
+              color="deep-orange"
+              @click="deleteATweetStream(index)"
+              icon="delete"
+            />
+            <q-btn
+              round
+              color="blue"
+              @click="sendTweet(listTweetStrem[index])"
+              icon="send"
+            />
+          </td>
+        </tr>
+      </table>
+    </div>
+    <div
+      v-if="tweetToSend && tweetToSend.user"
+      style="
+        background: #42b983;
+        padding: 4rem;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      "
+    >
+      <div
+        id="tweet_to_send"
+        style="
+          padding: 4rem;
+          background: #42b983;
+          width: 1000px;
+          height: 1000px;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+        "
+      >
+        <div class="tweet" style="margin: 2rem; min-width: 700px">
+          <div class="box">
+            <article class="media">
+              <div class="media">
+                <figure class="image">
+                  <img
+                    style="border-radius: 50%"
+                    width="120px"
+                    :src="tweetToSend.user.profile_image_url_https"
+                  />
+                </figure>
+              </div>
+              <div class="media-content w100" style="font-size: 1.5rem">
+                <div class="content">
+                  <p>
+                    <strong class="q-mr-sm">{{ tweetToSend.user.name }}</strong>
+                    <small>@{{ tweetToSend.user.screen_name }}</small>
+                  </p>
+                  <p>
+                    {{ tweetToSend.text }}
+                  </p>
+                </div>
+              </div>
+            </article>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script lang="ts">
+var doc = document;
 import { useQuasar } from "quasar";
 import { Vue, prop } from "vue-class-component";
 import { Todo, Meta } from "./models";
-import { computed, ComputedRef } from "vue";
-
+declare var html2canvas: any;
+var ht: any = html2canvas;
 class Props {
   readonly title!: string;
   readonly todos = prop<Todo[]>({ default: () => [] });
@@ -102,6 +256,17 @@ export default class ClassComponent extends Vue.with(Props) {
   $q = useQuasar();
   tweet: string = "";
   startedTweet = false;
+
+  streams: { id: any }[] = [];
+
+  ID_TWITTER = "1430080503848259601";
+
+  instagramPost = false;
+  instagramReel = false;
+  twitterPost = false;
+
+  tweetToSend: any = {};
+
   days = [];
   time = "12:00";
   events: any[] = [];
@@ -239,6 +404,11 @@ export default class ClassComponent extends Vue.with(Props) {
             qdate: day,
             qtime: this.time,
             file: this.file ? reader.result : null,
+            type: {
+              instagramPost: this.instagramPost,
+              instagramReel: this.instagramReel,
+              twitterPost: this.twitterPost,
+            },
           });
         });
         this.days = [];
@@ -271,6 +441,11 @@ export default class ClassComponent extends Vue.with(Props) {
           date: this.formatDate(day),
           qdate: day,
           qtime: this.time,
+          type: {
+            instagramPost: this.instagramPost,
+            instagramReel: this.instagramReel,
+            twitterPost: this.twitterPost,
+          },
         });
       });
       this.days = [];
@@ -314,58 +489,69 @@ export default class ClassComponent extends Vue.with(Props) {
   }
   starTimer() {
     const timezone = 1000 * 60 * 60;
-    this.startedTweet = true;
-    setInterval(() => {
-      this.rows.forEach((t: any, i: number) => {
-        const left = new Date(t.date).getTime() - new Date().getTime() - timezone;
-        if (left < 0 && left + 1000 * 60 * 10 > 0) {
-          if (t.file) {
-            var formData = new FormData();
-            formData.append("tweet", t.tweet);
-            formData.append("altText", t.tweet);
-            // HTML file input user's choice...
-            formData.append("media_data", t.file);
-            var request = new XMLHttpRequest();
-            request.open("POST", "http://localhost:3000/twitter/media");
-            request.onreadystatechange = () => {
-              if (request.readyState === XMLHttpRequest.DONE && request.status === 200) {
-                this.deleteTweet({ rowIndex: i, row: { tweet: t.tweet } });
-              }
-            };
-            request.send(formData);
+    let timer: any;
+    if (!this.startedTweet) {
+      this.startedTweet = true;
+      timer = setInterval(() => {
+        this.rows.forEach((t: any, i: number) => {
+          const left = new Date(t.date).getTime() - new Date().getTime() - timezone;
+          if (left < 0 && left + 1000 * 60 * 10 > 0) {
+            if (t.file) {
+              var formData = new FormData();
+              formData.append("tweet", t.tweet);
+              formData.append("altText", t.tweet);
+              // HTML file input user's choice...
+              formData.append("media_data", t.file);
+              var request = new XMLHttpRequest();
+              request.open("POST", "http://localhost:3000/twitter/media");
+              request.onreadystatechange = () => {
+                if (
+                  request.readyState === XMLHttpRequest.DONE &&
+                  request.status === 200
+                ) {
+                  this.deleteTweet({ rowIndex: i, row: { tweet: t.tweet } });
+                }
+              };
+              request.send(formData);
 
-            var formData2 = new FormData();
-            formData2.append("tweet", t.tweet);
-            formData2.append("media_data", t.file);
-            var request2 = new XMLHttpRequest();
-            request2.open("POST", "http://localhost:3000/instagram/post-photo");
-            request2.onreadystatechange = () => {
-              if (
-                request2.readyState === XMLHttpRequest.DONE &&
-                request2.status === 200
-              ) {
-                // SUCCESS
-              }
-            };
-            request2.send(formData2);
-          } else {
-            fetch("http://localhost:3000/twitter", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({ tweet: t.tweet }),
-            })
-              .then((response) => response.json())
-              .then((d) => {
-                this.deleteTweet({ rowIndex: i, row: { tweet: t.tweet } });
-              });
+              var formData2 = new FormData();
+              formData2.append("tweet", t.tweet);
+              formData2.append("media_data", t.file);
+              var request2 = new XMLHttpRequest();
+              request2.open("POST", "http://localhost:3000/instagram/post-photo");
+              request2.onreadystatechange = () => {
+                if (
+                  request2.readyState === XMLHttpRequest.DONE &&
+                  request2.status === 200
+                ) {
+                  // SUCCESS
+                }
+              };
+              request2.send(formData2);
+            } else {
+              fetch("http://localhost:3000/twitter", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ tweet: t.tweet }),
+              })
+                .then((response) => response.json())
+                .then((d) => {
+                  this.deleteTweet({ rowIndex: i, row: { tweet: t.tweet } });
+                });
+            }
           }
-        }
-      });
-    }, 10000);
+        });
+        this.getStream();
+        this.getListTweetStream();
+      }, 10000);
+    } else {
+      this.startedTweet = false;
+      timer.clearInterval();
+    }
   }
-  submit(t: any, i: number) {
+  submit(t: any) {
     if (t.file) {
       var formData = new FormData();
       formData.append("tweet", t.tweet);
@@ -421,6 +607,100 @@ export default class ClassComponent extends Vue.with(Props) {
         });
     }
   }
+
+  sendTweet(tweet: any) {
+    this.tweetToSend = tweet;
+    setTimeout(() => {
+      ht(document.querySelector("#tweet_to_send"), {
+        letterRendering: 1,
+        allowTaint: false,
+        foreignObjectRendering: true,
+        useCORS: true,
+        scale: 2,
+        width: 1000,
+        height: 1000,
+        onrendered: (canvas: any) => {
+          // document.body.appendChild(canvas);
+          var data = canvas.toDataURL("image/jpeg");
+          console.log(data);
+          this.submit({
+            file: data,
+            tweet: "",
+          });
+        },
+      }).then((canvas: any) => {});
+    }, 100);
+  }
+
+  getStream() {
+    fetch("http://localhost:3000/twitter/stream", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+      .then((response) => response.json())
+      .then((d) => {
+        console.log({ d });
+        this.streams = d.response.map((id: any) => {
+          return { id };
+        });
+      });
+  }
+  deleteAStream(id: number) {
+    fetch("http://localhost:3000/twitter/stream/" + id, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+      .then((response) => response.json())
+      .then((d) => {
+        console.log(d);
+        this.streams = d.response;
+      });
+  }
+  deleteATweetStream(id: number) {
+    fetch("http://localhost:3000/twitter/stream-tweet/" + id, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+      .then((response) => response.json())
+      .then((d) => {
+        console.log(d);
+        this.listTweetStrem = d.response;
+      });
+  }
+
+  listTweetStrem: any = [];
+  getListTweetStream() {
+    fetch("http://localhost:3000/twitter/stream/last", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+      .then((response) => response.json())
+      .then((d: any) => {
+        console.log(d);
+        this.listTweetStrem = d.response;
+      });
+  }
+  setStream(id: any) {
+    fetch("http://localhost:3000/twitter/stream/" + id, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({}),
+    })
+      .then((response) => response.json())
+      .then((d) => {
+        console.log(d);
+      });
+  }
 }
 </script>
 <style>
@@ -429,5 +709,25 @@ export default class ClassComponent extends Vue.with(Props) {
 }
 .flex {
   display: flex;
+}
+
+.tweet {
+  background-color: #fff;
+  color: #373737;
+  box-shadow: 0 2px 3px 3px rgba(10, 10, 10, 0.25), 0 0 0 1px rgba(10, 10, 10, 0.1);
+  padding: 30px;
+}
+.media {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+img {
+  width: 120px;
+  margin-right: 15px;
+}
+small {
+  font-size: 14px;
+  color: #657786;
 }
 </style>
