@@ -90,14 +90,14 @@
     </q-table>
     <div class="w100 q-mt-md" style="display: flex">
       <div class="w100">
-        <q-btn label="Get streams" type="button" color="primary" @click="getStream()" />
+        <q-btn label="Get streams" type="button" color="primary" @click="getReposts()" />
       </div>
       <div class="w100" style="display: flex">
         <q-input filled v-model="ID_TWITTER" label="ID Twitter" />
         <q-btn
           label="Set Stream"
           type="button"
-          @click="setStream(ID_TWITTER)"
+          @click="setReposts(ID_TWITTER)"
           color="primary"
           flat
           class="q-ml-sm"
@@ -111,33 +111,30 @@
         <tr class="q-table__top" style="font-weight: bolder">
           <td class="w100">Id</td>
           <td></td>
+          <td></td>
         </tr>
-        <tr
-          v-for="(stream, index) in streams"
-          v-bind:todo="stream"
-          v-bind:key="stream.id"
-        >
-          <td>{{ stream.id }}</td>
+        <tr v-for="repost in reposts" v-bind:todo="repost" v-bind:key="repost">
+          <td>{{ repost }}</td>
+          <td>
+            <q-btn
+              label="Get list tweets"
+              type="button"
+              @click="getTweetReposts(repost)"
+              color="primary"
+              flat
+              class="q-ml-sm"
+            />
+          </td>
           <td>
             <q-btn
               round
               color="deep-orange"
-              @click="deleteAStream(index)"
+              @click="deleteARepost(repost)"
               icon="delete"
             />
           </td>
         </tr>
       </table>
-    </div>
-    <div class="w100 flex q-mt-md">
-      <q-btn
-        label="Get list tweets"
-        type="button"
-        @click="getListTweetStream()"
-        color="primary"
-        flat
-        class="q-ml-sm"
-      />
     </div>
     <div
       class="q-table__container q-table--horizontal-separator column no-wrap q-table__card q-table--no-wrap q-mt-md"
@@ -152,8 +149,8 @@
           <td>Like</td>
           <td>Quote</td>
           <td>Reply</td>
-          <td>Tweet</td>
           <td></td>
+          <td style="max-width: 200px">Tweet</td>
         </tr>
         <tr v-for="(link, index) in listTweetStrem" :key="index" v-bind="link">
           <td>{{ listTweetStrem[index].id }}</td>
@@ -164,12 +161,11 @@
           <td>{{ listTweetStrem[index].favorite_count }}</td>
           <td>{{ listTweetStrem[index].quote_count }}</td>
           <td>{{ listTweetStrem[index].reply_count }}</td>
-          <td>{{ listTweetStrem[index].text }}</td>
           <td>
             <q-btn
               round
               color="deep-orange"
-              @click="deleteATweetStream(index)"
+              @click="deleteATweetReposts(index)"
               icon="delete"
             />
             <q-btn
@@ -178,6 +174,11 @@
               @click="sendTweet(listTweetStrem[index])"
               icon="send"
             />
+          </td>
+          <td>
+            <span>
+              {{ listTweetStrem[index].text }}
+            </span>
           </td>
         </tr>
       </table>
@@ -257,9 +258,10 @@ export default class ClassComponent extends Vue.with(Props) {
   tweet: string = "";
   startedTweet = false;
 
-  streams: { id: any }[] = [];
+  reposts: string[] = [];
 
-  ID_TWITTER = "1430080503848259601";
+  listTweetStrem: any = [];
+  ID_TWITTER = "francupen";
 
   instagramPost = false;
   instagramReel = false;
@@ -325,24 +327,16 @@ export default class ClassComponent extends Vue.with(Props) {
       const row: any = props.row;
       const rowIndex: number = props.rowIndex;
       // this.events[rowIndex] = row.date;
-      fetch("http://localhost:3000/api/" + rowIndex, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ...row,
-          date: this.formatAllDate(row.qdate, row.qtime),
-        }),
-      })
-        .then((response) => response.json())
-        .then((d) => {
-          this.events = [];
-          d.tweets.forEach((t: any) => {
-            this.events.push(t.qdate);
-          });
-          this.rows = d.tweets;
+      this._update("api", "/tweets/" + rowIndex, {
+        ...row,
+        date: this.formatAllDate(row.qdate, row.qtime),
+      }).then((d) => {
+        this.events = [];
+        d.tweets.forEach((t: any) => {
+          this.events.push(t.qdate);
         });
+        this.rows = d.tweets;
+      });
     }, 100);
   }
   deleteTweet(props: any) {
@@ -350,21 +344,14 @@ export default class ClassComponent extends Vue.with(Props) {
     this.events.splice(rowIndex, 1);
     this.rows.splice(rowIndex, 1);
 
-    fetch("http://localhost:3000/api/" + rowIndex, {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    })
-      .then((response) => response.json())
-      .then((d) => {
-        this.events = [];
-        d.tweets.forEach((t: any) => {
-          this.events.push(t.qdate);
-        });
-        this.rows = d.tweets;
-        this.showNotif(props.row.tweet);
+    this._delete("api", "/tweets/" + rowIndex).then((d) => {
+      this.events = [];
+      d.tweets.forEach((t: any) => {
+        this.events.push(t.qdate);
       });
+      this.rows = d.tweets;
+      this.showNotif(props.row.tweet);
+    });
   }
 
   showNotif(tweet: string) {
@@ -414,21 +401,13 @@ export default class ClassComponent extends Vue.with(Props) {
         this.days = [];
         this.time = "12:00";
         this.tweet = "";
-        fetch("http://localhost:3000/api/", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(rows),
-        })
-          .then((response) => response.json())
-          .then((d) => {
-            this.events = [];
-            d.tweets.forEach((t: any) => {
-              this.events.push(t.qdate);
-            });
-            this.rows = d.tweets;
+        this._post("api", "/tweets", rows).then((d) => {
+          this.events = [];
+          d.tweets.forEach((t: any) => {
+            this.events.push(t.qdate);
           });
+          this.rows = d.tweets;
+        });
       };
       reader.onerror = (error) => {
         console.log("Error: ", error);
@@ -451,38 +430,23 @@ export default class ClassComponent extends Vue.with(Props) {
       this.days = [];
       this.time = "12:00";
       this.tweet = "";
-      fetch("http://localhost:3000/api/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(rows),
-      })
-        .then((response) => response.json())
-        .then((d) => {
-          this.events = [];
-          d.tweets.forEach((t: any) => {
-            this.events.push(t.qdate);
-          });
-          this.rows = d.tweets;
-        });
-    }
-  }
-
-  refreshTweets() {
-    fetch("http://localhost:3000/api/", {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    })
-      .then((response) => response.json())
-      .then((d) => {
+      this._post("api", "/tweets", rows).then((d) => {
+        this.events = [];
         d.tweets.forEach((t: any) => {
           this.events.push(t.qdate);
         });
         this.rows = d.tweets;
       });
+    }
+  }
+
+  refreshTweets() {
+    this._get("api").then((d) => {
+      d.tweets.forEach((t: any) => {
+        this.events.push(t.qdate);
+      });
+      this.rows = d.tweets;
+    });
   }
   created() {
     this.refreshTweets();
@@ -490,6 +454,31 @@ export default class ClassComponent extends Vue.with(Props) {
   starTimer() {
     const timezone = 1000 * 60 * 60;
     let timer: any;
+    let timerReposts: any;
+
+    if (!this.startedTweet) {
+      let idTimerRepost: any = localStorage.getItem("idTimerRepost");
+      idTimerRepost = !idTimerRepost ? 0 : Number(idTimerRepost);
+      timerReposts = setInterval(() => {
+        this._get("twitter", "/repost/accounts").then((d) => {
+          console.log(d);
+          this.reposts = d;
+          if (!d[idTimerRepost]) {
+            idTimerRepost = 0;
+          }
+          const currentRepost = d[idTimerRepost];
+          console.log(currentRepost);
+          this._get("twitter", "/repost/tweets/" + currentRepost).then((d) => {
+            console.log(d);
+            this.listTweetStrem = d;
+            localStorage.setItem("idTimerRepost", ++idTimerRepost + "");
+            this.sendTweet(d[0]);
+          });
+        });
+      }, 1000 * 60);
+    } else {
+      clearInterval(timerReposts);
+    }
     if (!this.startedTweet) {
       this.startedTweet = true;
       timer = setInterval(() => {
@@ -529,26 +518,17 @@ export default class ClassComponent extends Vue.with(Props) {
               };
               request2.send(formData2);
             } else {
-              fetch("http://localhost:3000/twitter", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ tweet: t.tweet }),
-              })
-                .then((response) => response.json())
-                .then((d) => {
-                  this.deleteTweet({ rowIndex: i, row: { tweet: t.tweet } });
-                });
+              this._post("twitter", "", { tweet: t.tweet }).then((d) => {
+                this.deleteTweet({ rowIndex: i, row: { tweet: t.tweet } });
+              });
             }
           }
         });
-        this.getStream();
-        this.getListTweetStream();
+        // this.getReposts();
       }, 10000);
     } else {
       this.startedTweet = false;
-      timer.clearInterval();
+      clearInterval(timer);
     }
   }
   submit(t: any) {
@@ -594,17 +574,9 @@ export default class ClassComponent extends Vue.with(Props) {
       };
       requestSTORIES.send(formDataSTORIES);
     } else {
-      fetch("http://localhost:3000/twitter", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ tweet: t.tweet }),
-      })
-        .then((response) => response.json())
-        .then((d) => {
-          // this.deleteTweet({ rowIndex: i, row: { tweet: t.tweet } });
-        });
+      this._post("twitter", "", { tweet: t.tweet }).then((d) => {
+        // this.deleteTweet({ rowIndex: i, row: { tweet: t.tweet } });
+      });
     }
   }
 
@@ -632,74 +604,74 @@ export default class ClassComponent extends Vue.with(Props) {
     }, 100);
   }
 
-  getStream() {
-    fetch("http://localhost:3000/twitter/stream", {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    })
-      .then((response) => response.json())
-      .then((d) => {
-        console.log({ d });
-        this.streams = d.response.map((id: any) => {
-          return { id };
-        });
-      });
+  getReposts() {
+    // this._get("twitter", "/repost/" + "gamesandartsnft").then((d) => {
+    //   console.log(d);
+    // });
+    this._get("twitter", "/repost/accounts").then((d) => {
+      console.log(d);
+      this.reposts = d;
+    });
   }
-  deleteAStream(id: number) {
-    fetch("http://localhost:3000/twitter/stream/" + id, {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    })
-      .then((response) => response.json())
-      .then((d) => {
-        console.log(d);
-        this.streams = d.response;
-      });
+  setReposts(id: any) {
+    this._post("twitter", "/repost/accounts", { id }).then((d) => {
+      console.log(d);
+      this.reposts = d;
+    });
   }
-  deleteATweetStream(id: number) {
-    fetch("http://localhost:3000/twitter/stream-tweet/" + id, {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    })
-      .then((response) => response.json())
-      .then((d) => {
-        console.log(d);
-        this.listTweetStrem = d.response;
-      });
+  deleteARepost(name: string) {
+    this._delete("twitter", "/repost/accounts/" + name).then((d) => {
+      console.log(d);
+      this.reposts = d;
+    });
   }
 
-  listTweetStrem: any = [];
-  getListTweetStream() {
-    fetch("http://localhost:3000/twitter/stream/last", {
+  getTweetReposts(id: string) {
+    this._get("twitter", "/repost/tweets/" + id).then((d) => {
+      console.log(d);
+      this.listTweetStrem = d;
+    });
+  }
+  deleteATweetReposts(id: number) {
+    this._delete("twitter", "/repost/tweets/" + id).then((d) => {
+      console.log(d);
+      this.listTweetStrem = d;
+    });
+  }
+
+  async _get(url = "api", path = "") {
+    return await fetch("http://localhost:3000/" + url + path, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
       },
-    })
-      .then((response) => response.json())
-      .then((d: any) => {
-        console.log(d);
-        this.listTweetStrem = d.response;
-      });
+    }).then((response) => response.json());
   }
-  setStream(id: any) {
-    fetch("http://localhost:3000/twitter/stream/" + id, {
+  async _post(url = "api", path = "", body: any) {
+    return await fetch("http://localhost:3000/" + url + path, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({}),
-    })
-      .then((response) => response.json())
-      .then((d) => {
-        console.log(d);
-      });
+      body: JSON.stringify(body),
+    }).then((response) => response.json());
+  }
+  async _delete(url = "api", path = "") {
+    return await fetch("http://localhost:3000/" + url + path, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }).then((response) => response.json());
+  }
+  async _update(url = "api", path = "", body: any) {
+    return await fetch("http://localhost:3000/" + url + path, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    }).then((response) => response.json());
   }
 }
 </script>

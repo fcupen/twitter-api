@@ -2,6 +2,7 @@ var express = require("express");
 var router = express.Router();
 var Twit = require("twit");
 
+var fs = require("fs");
 if (process.env.NODE_ENV !== "production") {
   require("dotenv").config();
 }
@@ -29,6 +30,11 @@ router.get("/", (req, res, next) => {
     if (error) throw error;
     console.log(response);
   });
+  // client.get('/statuses/user_timeline.json', { screen_name: 'francupen', count: 5}, (error, tweet, response) => {
+  //   if (error) throw error;
+  //   console.log(response);
+  //   res.json({ response, tweet });
+  // });
 });
 /* POST A TWEET. */
 router.post("/", (req, res, next) => {
@@ -104,47 +110,238 @@ router.post("/slug", (req, res, next) => {
   });
 });
 
-
-/* STREAM TWEET. */
-router.get("/stream", (req, res, next) => {
-  res.json({ response: streams });
-});
-
-/* STREAM TWEET. */
-router.get("/stream/last", (req, res, next) => {
-  res.json({ response: tweetStreams });
-});
-
-/* STREAM TWEET. */
-router.post("/stream/:id", (req, res, next) => {
+/* POST A TWEET. */
+router.delete("/repost/accounts/:id", (req, res, next) => {
   const id = req.params.id;
-  streams.push(id);
-  var stream = client.stream("statuses/filter", { follow: id });
-  stream.on("data", function (event) {
-    console.log(event);
-    tweetStreams.push(event);
+  fs.readFile("./db/db.json", (err, data) => {
+    let db = JSON.parse(data);
+    if (!db.repost_accounts) {
+      db.repost_accounts = [];
+    }
+
+    const repost_accounts = db.repost_accounts.filter(
+      (repost) => repost !== id
+    );
+    fs.writeFile(
+      "./db/db.json",
+      JSON.stringify({
+        ...db,
+        repost_accounts: repost_accounts,
+      }),
+      (err) => {
+        if (err) throw err;
+        res.json(db.repost_accounts);
+      }
+    );
   });
+});
 
-  stream.on("error", function (error) {
-    throw error;
+/* POST A TWEET. */
+router.post("/repost/accounts", (req, res, next) => {
+  var body = req.body;
+  fs.readFile("./db/db.json", (err, data) => {
+    let db = JSON.parse(data);
+    if (!db.repost_accounts) {
+      db.repost_accounts = [];
+    }
+    if (!db.repost_accounts.includes(body.id)) {
+      db.repost_accounts.push(body.id);
+      fs.writeFile(
+        "./db/db.json",
+        JSON.stringify({
+          ...db,
+          repost_accounts: db.repost_accounts,
+        }),
+        (err) => {
+          if (err) throw err;
+          res.json(db.repost_accounts);
+        }
+      );
+    } else {
+      res.json(db.repost_accounts);
+    }
   });
-  res.json({ response: streams });
 });
-
-/* STREAM TWEET. */
-router.delete("/stream/:id", (req, res, next) => {
+/* POST A TWEET. */
+router.get("/repost/accounts", (req, res, next) => {
+  fs.readFile("./db/db.json", (err, data) => {
+    let db = JSON.parse(data);
+    if (!db.repost_accounts) {
+      db.repost_accounts = [];
+    }
+    res.json(db.repost_accounts);
+  });
+});
+/* REPOST A TWEET. */
+router.get("/repost/tweets/:id", (req, res, next) => {
   const id = req.params.id;
-  streams.splice(Number(id), 1);
-  res.json({ response: streams });
+  client.get(
+    "/statuses/user_timeline.json",
+    { screen_name: id, count: 5 },
+    (error, tweet, response) => {
+      if (error) throw error;
+      console.log(tweet);
+      const tweets = tweet.reduce((p, n) => {
+        return { ...p, [n.id]: n };
+      }, {});
+      fs.readFile("./db/db.json", (err, data) => {
+        let db = JSON.parse(data);
+        if (!db.repost_tweets) {
+          db.repost_tweets = {};
+        }
+        if (!db.repost_tweets[tweet[0].user.id]) {
+          db.repost_tweets[tweet[0].user.id] = {};
+        }
+        fs.writeFile(
+          "./db/db.json",
+          JSON.stringify({
+            ...db,
+            repost_tweets: {
+              ...db.repost_tweets,
+              [tweet[0].user.id]: {
+                ...db.repost_tweets[tweet[0].user.id],
+                ...tweets,
+              },
+            },
+          }),
+          (err) => {
+            if (err) throw err;
+            res.json(tweet);
+          }
+        );
+      });
+    }
+  );
 });
 
-/* STREAM TWEET. */
-router.delete("/stream-tweet/:id", (req, res, next) => {
-  const id = req.params.id;
-  tweetStreams.splice(Number(id), 1);
-  res.json({ response: tweetStreams });
-});
+// client.get('/statuses/user_timeline.json', { screen_name: 'francupen', count: 5}, (error, tweet, response) => {
+//   if (error) throw error;
+//   console.log(response);
+//   res.json({ response, tweet });
+// });
 
+// /* STREAM TWEET. */
+// router.get("/streams", (req, res, next) => {
+//   fs.readFile("./db/db.json", (err, data) => {
+//     let db = JSON.parse(data).streams;
+//     res.json({ response: db });
+//   });
+// });
+
+// /* STREAM TWEET. */
+// router.get("/streams/last", (req, res, next) => {
+//   res.json({ response: tweetStreams });
+// });
+
+// /* STREAM TWEET. */
+// router.post("/streams/:id", (req, res, next) => {
+//   const id = req.params.id;
+//   console.log(id);
+//   // var stream = client.stream("statuses/filter", {
+//   //   follow: Number(id),
+//   // });
+//   // stream.on("data", function (event) {
+//   //   console.log(event);
+
+//   //   // if (!db.streamsTweets) {
+//   //   //   db.streamsTweets = [];
+//   //   // }
+//   //   // fs.writeFile(
+//   //   //   "./db/db.json",
+//   //   //   JSON.stringify({
+//   //   //     ...db,
+//   //   //     streamsTweets: [event, ...db.streamsTweets],
+//   //   //   }),
+//   //   //   (err) => {
+//   //   //     if (err) throw err;
+//   //   //   }
+//   //   // );
+//   // });
+
+//   // stream.on("error", function (error) {
+//   //   console.log("----- ERROR -----", error);
+//   //   throw error;
+//   // });
+
+//   // try {
+//   //   fs.readFile("./db/db.json", (err, data) => {
+//   //     let db = JSON.parse(data);
+//   //     if (!db.streams) {
+//   //       db.streams = [];
+//   //     }
+//   //     db.streams.push(id);
+//   //     fs.writeFile(
+//   //       "./db/db.json",
+//   //       JSON.stringify({ ...JSON.parse(data), streams: db.streams }),
+//   //       (err) => {
+//   //         if (err) throw err;
+//   //         // start_streams();
+
+//   //         res.json({ response: streams });
+//   //       }
+//   //     );
+//   //   });
+//   // } catch (error) {
+//   //   console.log(error);
+//   // }
+// });
+
+// /* STREAM TWEET. */
+// router.delete("/streams/:id", (req, res, next) => {
+//   const id = req.params.id;
+//   fs.readFile("./db/db.json", (err, data) => {
+//     let streams = JSON.parse(data).streams;
+//     streams.splice(Number(id), 1);
+//     fs.writeFile(
+//       "./db/db.json",
+//       JSON.stringify({ ...JSON.parse(data), streams }),
+//       (err) => {
+//         if (err) throw err;
+//         res.json({ response: streams });
+//       }
+//     );
+//   });
+// });
+
+// /* STREAM TWEET. */
+// router.delete("/streams-tweet/:id", (req, res, next) => {
+//   const id = req.params.id;
+//   tweetStreams.splice(Number(id), 1);
+//   res.json({ response: tweetStreams });
+// });
+
+// function start_streams() {
+//   fs.readFile("./db/db.json", (err, data) => {
+//     let db = JSON.parse(data);
+
+//     console.log("----- streams -----", db);
+//     db.streams.forEach((id) => {
+//       var stream = client.stream("statuses/filter", { follow: Number(id) });
+//       stream.on("data", function (event) {
+//         console.log(event);
+
+//         if (!db.streamsTweets) {
+//           db.streamsTweets = [];
+//         }
+//         fs.writeFile(
+//           "./db/db.json",
+//           JSON.stringify({
+//             ...db,
+//             streamsTweets: [event, ...db.streamsTweets],
+//           }),
+//           (err) => {
+//             if (err) throw err;
+//           }
+//         );
+//       });
+
+//       stream.on("error", function (error) {
+//         console.log("----- ERROR -----", error);
+//         throw error;
+//       });
+//     });
+//   });
+// }
 // /* STREAM TWEET. */
 // router.post("/stream", (req, res, next) => {
 //   var stream = client.stream(
@@ -161,6 +358,18 @@ router.delete("/stream-tweet/:id", (req, res, next) => {
 //   });
 // });
 
+// var stream = client.stream(
+//   "statuses/filter",
+//   { track: "nft" }
+//   // { follow: "876596261931155456" }
+// );
+// stream.on("data", function (event) {
+//   console.log(event && event.text);
+// });
+
+// stream.on("error", function (error) {
+//   throw error;
+// });
 module.exports = router;
 
 // //

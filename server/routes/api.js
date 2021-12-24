@@ -13,45 +13,60 @@ router.get("/", function (req, res, next) {
 });
 /* POST TWEET. */
 const timezone = 1000 * 60 * 60;
-router.post("/", function (req, res, next) {
+router.post("/:key", function (req, res, next) {
+  const key = req.params.key;
   var tweet = req.body;
   fs.readFile("./db/db.json", (err, data) => {
-    let tweets = JSON.parse(data).tweets;
-    const tweetFilter = tweet.filter(
-      (t) => new Date(t.date).getTime() - new Date().getTime() - timezone > 0
+    let db = JSON.parse(data)[key];
+    if (db === "tweets") {
+      const tweetFilter = tweet.filter(
+        (t) => new Date(t.date).getTime() - new Date().getTime() - timezone > 0
+      );
+      db.unshift(...tweetFilter);
+    } else {
+      db.unshift(...tweet);
+    }
+    fs.writeFile(
+      "./db/db.json",
+      JSON.stringify({ ...JSON.parse(data), [key]: db }),
+      (err) => {
+        if (err) throw err;
+        res.json({ ...JSON.parse(data), [key]: db });
+      }
     );
-    tweets.unshift(...tweetFilter);
-    fs.writeFile("./db/db.json", JSON.stringify({ tweets: tweets }), (err) => {
-      if (err) throw err;
-      res.json({ tweets: tweets });
-    });
   });
 });
 /* PUT TWEET. */
-router.put("/:id", function (req, res, next) {
+router.put("/:key/:id", function (req, res, next) {
   var tweet = req.body;
+  const key = req.params.key;
   const id = req.params.id;
   fs.readFile("./db/db.json", (err, data) => {
-    let tweets = JSON.parse(data).tweets;
-    tweets[Number(id)] = tweet;
-    fs.writeFile("./db/db.json", JSON.stringify({ tweets }), (err) => {
-      if (err) throw err;
-      res.json({ tweets });
-    });
+    let db = JSON.parse(data)[key];
+    db[Number(id)] = tweet;
+    fs.writeFile(
+      "./db/db.json",
+      JSON.stringify({ ...data, [key]: db }),
+      (err) => {
+        if (err) throw err;
+        res.json({ ...data, [key]: db });
+      }
+    );
   });
 });
 /* DELETE TWEET. */
-router.delete("/:id", function (req, res, next) {
+router.delete("/:key/:id", function (req, res, next) {
   const id = req.params.id;
+  const key = req.params.key;
   fs.readFile("./db/db.json", (err, data) => {
-    let tweets = JSON.parse(data);
-    tweets.tweets.splice(id, 1);
+    let db = JSON.parse(data);
+    db[key].splice(id, 1);
     fs.writeFile(
       "./db/db.json",
-      JSON.stringify({ tweets: tweets.tweets }),
+      JSON.stringify({ ...data, [key]: db[key] }),
       (err) => {
         if (err) throw err;
-        res.json({ tweets: tweets.tweets });
+        res.json({ ...data, [key]: db[key] });
       }
     );
   });
