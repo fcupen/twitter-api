@@ -28,7 +28,7 @@ var T = new Twit({
 router.get("/", (req, res, next) => {
   client.get("statuses/home_timeline", (error, tweet, response) => {
     if (error) throw error;
-    console.log(response);
+    // console.log(response);
   });
   // client.get('/statuses/user_timeline.json', { screen_name: 'francupen', count: 5}, (error, tweet, response) => {
   //   if (error) throw error;
@@ -44,7 +44,7 @@ router.post("/", (req, res, next) => {
     "statuses/update",
     { status: tweet },
     (error, tweet, response) => {
-      if (error) throw error;
+      // if (error) throw error;
       res.json({ response });
     }
   );
@@ -55,7 +55,7 @@ router.post("/media", upload.any(), (req, res, next) => {
   // console.log(req.body)
   T.post(
     "media/upload",
-    { media_data: req.body.media_data.split("base64,")[1] },
+    { media_data: req.body.media_data.split("base64,")[1], status: tweet },
     function (err, data, response) {
       if (err) {
         res.json({ err, response, data });
@@ -175,43 +175,51 @@ router.get("/repost/accounts", (req, res, next) => {
 /* REPOST A TWEET. */
 router.get("/repost/tweets/:id", (req, res, next) => {
   const id = req.params.id;
-  client.get(
-    "/statuses/user_timeline.json",
-    { screen_name: id, count: 5 },
-    (error, tweet, response) => {
-      if (error) throw error;
-      console.log(tweet);
-      const tweets = tweet.reduce((p, n) => {
-        return { ...p, [n.id]: n };
-      }, {});
-      fs.readFile("./db/db.json", (err, data) => {
-        let db = JSON.parse(data);
-        if (!db.repost_tweets) {
-          db.repost_tweets = {};
-        }
-        if (!db.repost_tweets[tweet[0].user.id]) {
-          db.repost_tweets[tweet[0].user.id] = {};
-        }
-        fs.writeFile(
-          "./db/db.json",
-          JSON.stringify({
-            ...db,
-            repost_tweets: {
-              ...db.repost_tweets,
-              [tweet[0].user.id]: {
-                ...db.repost_tweets[tweet[0].user.id],
-                ...tweets,
-              },
-            },
-          }),
-          (err) => {
-            if (err) throw err;
-            res.json(tweet);
-          }
-        );
-      });
+  T.get(
+    "search/tweets",
+    { q: "nft", count: 200 },
+    function (err, data, response) {
+      // console.log(data);
+      res.json(data.statuses);
     }
   );
+  // client.get(
+  //   "/statuses/user_timeline.json",
+  //   { screen_name: id, count: 5 },
+  //   (error, tweet, response) => {
+  //     if (error) throw error;
+  //     console.log(tweet);
+  //     const tweets = tweet.reduce((p, n) => {
+  //       return { ...p, [n.id]: n };
+  //     }, {});
+  //     fs.readFile("./db/db.json", (err, data) => {
+  //       let db = JSON.parse(data);
+  //       if (!db.repost_tweets) {
+  //         db.repost_tweets = {};
+  //       }
+  //       if (!db.repost_tweets[tweet[0].user.id]) {
+  //         db.repost_tweets[tweet[0].user.id] = {};
+  //       }
+  //       fs.writeFile(
+  //         "./db/db.json",
+  //         JSON.stringify({
+  //           ...db,
+  //           repost_tweets: {
+  //             ...db.repost_tweets,
+  //             [tweet[0].user.id]: {
+  //               ...db.repost_tweets[tweet[0].user.id],
+  //               ...tweets,
+  //             },
+  //           },
+  //         }),
+  //         (err) => {
+  //           if (err) throw err;
+  //           res.json(tweet);
+  //         }
+  //       );
+  //     });
+  //   }
+  // );
 });
 
 // client.get('/statuses/user_timeline.json', { screen_name: 'francupen', count: 5}, (error, tweet, response) => {

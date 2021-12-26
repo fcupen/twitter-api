@@ -9,7 +9,6 @@ if (process.env.NODE_ENV !== "production") {
 }
 var apiRouter = require("./routes/api");
 var adminRouter = require("./routes/admin");
-var instagramRouter = require("./routes/instagram");
 var twitterRouter = require("./routes/twitter");
 
 var app = express();
@@ -37,7 +36,6 @@ app.use(function (req, res, next) {
 app.use("/api", apiRouter);
 app.use("/admin", adminRouter);
 app.use("/twitter", twitterRouter);
-app.use("/instagram", instagramRouter);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {

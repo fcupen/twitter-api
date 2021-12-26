@@ -205,7 +205,8 @@
           align-items: center;
         "
       >
-        <div class="tweet" style="margin: 2rem; min-width: 700px">
+        <img :src="tweetToSend?.file_tweet" style="width: 80%" />
+        <!-- <div class="tweet" style="margin: 2rem; min-width: 700px">
           <div class="box">
             <article class="media">
               <div class="media">
@@ -230,7 +231,7 @@
               </div>
             </article>
           </div>
-        </div>
+        </div> -->
       </div>
     </div>
   </div>
@@ -457,25 +458,53 @@ export default class ClassComponent extends Vue.with(Props) {
     let timerReposts: any;
 
     if (!this.startedTweet) {
-      let idTimerRepost: any = localStorage.getItem("idTimerRepost");
-      idTimerRepost = !idTimerRepost ? 0 : Number(idTimerRepost);
+      // let idTimerRepost: any = localStorage.getItem("idTimerRepost");
+      // idTimerRepost = !idTimerRepost ? 0 : Number(idTimerRepost);
       timerReposts = setInterval(() => {
-        this._get("twitter", "/repost/accounts").then((d) => {
-          console.log(d);
-          this.reposts = d;
-          if (!d[idTimerRepost]) {
-            idTimerRepost = 0;
-          }
-          const currentRepost = d[idTimerRepost];
-          console.log(currentRepost);
-          this._get("twitter", "/repost/tweets/" + currentRepost).then((d) => {
-            console.log(d);
-            this.listTweetStrem = d;
-            localStorage.setItem("idTimerRepost", ++idTimerRepost + "");
-            this.sendTweet(d[0]);
+        // this._get("twitter", "/repost/accounts").then((d) => {
+        //   console.log(d);
+        //   this.reposts = d;
+        //   if (!d[idTimerRepost]) {
+        //     idTimerRepost = 0;
+        //   }
+        //   const currentRepost = d[idTimerRepost];
+        //   console.log(currentRepost);
+        //   this._get("twitter", "/repost/tweets/" + currentRepost).then((d) => {
+        //     console.log(d);
+        //     this.listTweetStrem = d;
+        //     localStorage.setItem("idTimerRepost", ++idTimerRepost + "");
+        //     this.sendTweet(d[0]);
+        //   });
+        // });
+        this._get("twitter", "/repost/tweets/" + 1).then((d) => {
+          const tws_filter = d.filter(
+            (tw: any) =>
+              tw.extended_entities &&
+              tw.extended_entities.media &&
+              tw.extended_entities.media.length > 0 &&
+              !tw.retweeted_status &&
+              !tw.truncated &&
+              !tw.is_quote_status &&
+              tw.text.includes("https://t.co/")
+          );
+          // console.log(tws_filter);
+          // localStorage.setItem("idTimerRepost", ++idTimerRepost + "");
+          let max = -Infinity;
+          let maxTweet: any = {};
+          tws_filter.forEach((dd: any) => {
+            if (dd.user.followers_count > max) {
+              max = dd.user.followers_count;
+              maxTweet = dd;
+              maxTweet.file_tweet = dd.extended_entities.media[0].media_url_https;
+              maxTweet.text_bk = maxTweet.text;
+              maxTweet.text =
+                "#NFT #NFTs #NFTCommunity #NFTGiveaway #NFTdrop #nftart #ETH #opensea #like #RT #follow #trend " +
+                ("https://t.co/" + dd.text.split("https://t.co/")[1]);
+            }
           });
+          this.sendTweet(maxTweet);
         });
-      }, 1000 * 60);
+      }, 1000 * 60 * 3);
     } else {
       clearInterval(timerReposts);
     }
@@ -507,7 +536,7 @@ export default class ClassComponent extends Vue.with(Props) {
               formData2.append("tweet", t.tweet);
               formData2.append("media_data", t.file);
               var request2 = new XMLHttpRequest();
-              request2.open("POST", "http://localhost:3000/instagram/post-photo");
+              request2.open("POST", "http://localhost:3001/instagram/post-photo");
               request2.onreadystatechange = () => {
                 if (
                   request2.readyState === XMLHttpRequest.DONE &&
@@ -531,57 +560,72 @@ export default class ClassComponent extends Vue.with(Props) {
       clearInterval(timer);
     }
   }
-  submit(t: any) {
+  submit(t: any, networks = ["twitter", "ig_post", "ig_story"]) {
     if (t.file) {
-      var formData = new FormData();
-      formData.append("tweet", t.tweet);
-      formData.append("altText", t.tweet);
-      // HTML file input user's choice...
-      formData.append("media_data", t.file);
-      var request = new XMLHttpRequest();
-      request.open("POST", "http://localhost:3000/twitter/media");
-      request.onreadystatechange = () => {
-        if (request.readyState === XMLHttpRequest.DONE && request.status === 200) {
-          // this.deleteTweet({ rowIndex: i, row: { tweet: t.tweet } });
-        }
-      };
-      request.send(formData);
+      if (networks.includes("twitter")) {
+        var formData = new FormData();
+        formData.append("tweet", t.tweet);
+        formData.append("altText", t.tweet);
+        // HTML file input user's choice...
+        formData.append("media_data", t.file);
+        var request = new XMLHttpRequest();
+        request.open("POST", "http://localhost:3000/twitter/media");
+        request.onreadystatechange = () => {
+          if (request.readyState === XMLHttpRequest.DONE && request.status === 200) {
+            // this.deleteTweet({ rowIndex: i, row: { tweet: t.tweet } });
+          }
+        };
+        request.send(formData);
+      }
 
-      var formDataIG = new FormData();
-      formDataIG.append("tweet", t.tweet);
-      formDataIG.append("media_data", t.file);
-      var requestIG = new XMLHttpRequest();
-      requestIG.open("POST", "http://localhost:3000/instagram/post-photo");
-      requestIG.onreadystatechange = () => {
-        if (requestIG.readyState === XMLHttpRequest.DONE && requestIG.status === 200) {
-          // SUCCESS
-        }
-      };
-      requestIG.send(formDataIG);
+      if (networks.includes("ig_post")) {
+        var formDataIG = new FormData();
+        formDataIG.append("tweet", t.tweet);
+        formDataIG.append("media_data", t.file);
+        var requestIG = new XMLHttpRequest();
+        requestIG.open("POST", "http://localhost:3001/instagram/post-photo");
+        requestIG.onreadystatechange = () => {
+          if (requestIG.readyState === XMLHttpRequest.DONE && requestIG.status === 200) {
+            // SUCCESS
+          }
+        };
+        requestIG.send(formDataIG);
+      }
 
-      var formDataSTORIES = new FormData();
-      formDataSTORIES.append("tweet", t.tweet);
-      formDataSTORIES.append("media_data", t.file);
-      var requestSTORIES = new XMLHttpRequest();
-      requestSTORIES.open("POST", "http://localhost:3000/instagram/post-story");
-      requestSTORIES.onreadystatechange = () => {
-        if (
-          requestSTORIES.readyState === XMLHttpRequest.DONE &&
-          requestSTORIES.status === 200
-        ) {
-          // SUCCESS
-        }
-      };
-      requestSTORIES.send(formDataSTORIES);
+      if (networks.includes("ig_story")) {
+        var formDataSTORIES = new FormData();
+        formDataSTORIES.append("tweet", t.tweet);
+        formDataSTORIES.append("media_data", t.file);
+        var requestSTORIES = new XMLHttpRequest();
+        requestSTORIES.open("POST", "http://localhost:3001/instagram/post-story");
+        requestSTORIES.onreadystatechange = () => {
+          if (
+            requestSTORIES.readyState === XMLHttpRequest.DONE &&
+            requestSTORIES.status === 200
+          ) {
+            // SUCCESS
+          }
+        };
+        requestSTORIES.send(formDataSTORIES);
+      }
     } else {
-      this._post("twitter", "", { tweet: t.tweet }).then((d) => {
-        // this.deleteTweet({ rowIndex: i, row: { tweet: t.tweet } });
-      });
+      if (networks.includes("twitter")) {
+        this._post("twitter", "", { tweet: t.tweet }).then((d) => {
+          // this.deleteTweet({ rowIndex: i, row: { tweet: t.tweet } });
+        });
+      }
     }
   }
 
   sendTweet(tweet: any) {
     this.tweetToSend = tweet;
+    this.submit(
+      {
+        // file: data,
+        tweet: tweet.text,
+      },
+      ["twitter"]
+    );
     setTimeout(() => {
       ht(document.querySelector("#tweet_to_send"), {
         letterRendering: 1,
@@ -594,11 +638,14 @@ export default class ClassComponent extends Vue.with(Props) {
         onrendered: (canvas: any) => {
           // document.body.appendChild(canvas);
           var data = canvas.toDataURL("image/jpeg");
-          console.log(data);
-          this.submit({
-            file: data,
-            tweet: "",
-          });
+          // console.log(data);
+          this.submit(
+            {
+              file: data,
+              tweet: tweet.text + " " + tweet.text_bk,
+            },
+            ["ig_post"]
+          );
         },
       }).then((canvas: any) => {});
     }, 100);
@@ -609,32 +656,32 @@ export default class ClassComponent extends Vue.with(Props) {
     //   console.log(d);
     // });
     this._get("twitter", "/repost/accounts").then((d) => {
-      console.log(d);
+      // console.log(d);
       this.reposts = d;
     });
   }
   setReposts(id: any) {
     this._post("twitter", "/repost/accounts", { id }).then((d) => {
-      console.log(d);
+      // console.log(d);
       this.reposts = d;
     });
   }
   deleteARepost(name: string) {
     this._delete("twitter", "/repost/accounts/" + name).then((d) => {
-      console.log(d);
+      // console.log(d);
       this.reposts = d;
     });
   }
 
   getTweetReposts(id: string) {
     this._get("twitter", "/repost/tweets/" + id).then((d) => {
-      console.log(d);
+      // console.log(d);
       this.listTweetStrem = d;
     });
   }
   deleteATweetReposts(id: number) {
     this._delete("twitter", "/repost/tweets/" + id).then((d) => {
-      console.log(d);
+      // console.log(d);
       this.listTweetStrem = d;
     });
   }
@@ -667,6 +714,15 @@ export default class ClassComponent extends Vue.with(Props) {
   async _update(url = "api", path = "", body: any) {
     return await fetch("http://localhost:3000/" + url + path, {
       method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    }).then((response) => response.json());
+  }
+  async _postIG(url = "api", path = "", body: any) {
+    return await fetch("http://localhost:3001/" + url + path, {
+      method: "POST",
       headers: {
         "Content-Type": "application/json",
       },

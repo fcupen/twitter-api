@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/stylesheets/style.css" />
+    <!-- Compiled and minified CSS -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"
+    />
+
+    <!-- Compiled and minified JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet"
+    />
+    <style>
+      /*Chrome*/
+      @media screen and (-webkit-min-device-pixel-ratio: 0) {
+        input[type="range"] {
+          overflow: hidden;
+        }
+
+        input[type="range"]::-webkit-slider-runnable-track {
+          color: #13bba4;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+          box-shadow: -1080px 0 0 1080px #43e5f7;
+        }
+      }
+      /** FF*/
+      input[type="range"]::-moz-range-progress {
+        background-color: #43e5f7;
+      }
+      input[type="range"]::-moz-range-track {
+        background-color: #9a905d;
+      }
+      /* IE*/
+      input[type="range"]::-ms-fill-lower {
+        background-color: #43e5f7;
+      }
+      input[type="range"]::-ms-fill-upper {
+        background-color: #9a905d;
+      }
+
+      .flex {
+        display: flex;
+      }
+      .full-width {
+        width: 100%;
+      }
+    </style>
+
+    <script>
+      function deleteTweet(id) {
+        fetch("http://localhost:3000/api/" + id, {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }).then((d) => {
+          location.reload();
+        });
+      }
+      function timezoneOffset(d) {
+        d.setTime(d.getTime() + d.getTimezoneOffset() * 60 * 1000);
+        return d;
+      }
+      function refreshTime(id, date, maxTime) {
+        let interval = setInterval(() => {
+          currentDate = new Date().getTime() / 1000;
+          tweetDate = timezoneOffset(new Date(date)).getTime() / 1000;
+          const max = Number(maxTime) - currentDate;
+
+          let current = 1 - (tweetDate - currentDate) / max;
+
+          if (current >= 1) {
+            clearInterval(interval);
+          }
+          document.getElementById("id-" + id).value = current * 100;
+          document.getElementById("id-perc-" + id).innerHTML =
+            (current * 100).toFixed(2) + "%";
+        }, 1000); /**/
+      }
+    </script>
+  </head>
+  <body>
+    <nav class="light-blue lighten-1" role="navigation">
+      <div class="nav-wrapper container">
+        <a id="logo-container" href="#" class="brand-logo"
+          >Twitter Tool Admin</a
+        >
+        <ul class="right hide-on-med-and-down">
+          <li><a href="#">Tweets</a></li>
+        </ul>
+
+        <ul id="nav-mobile" class="sidenav">
+          <li><a href="#">Tweets</a></li>
+        </ul>
+        <a href="#" data-target="nav-mobile" class="sidenav-trigger"
+          ><i class="material-icons">menu</i></a
+        >
+      </div>
+    </nav>
+    <div class="container">
+      <div class="section">
+        <div class="row">
+          <% tweets.forEach((data, i) => { %>
+          <div class="col s12 m12">
+            <div class="icon-block">
+              <div class="full-width flex">
+                <h5 class="center light-blue-text"><%- i+1 %></h5>
+                <p class="center"><%- data.tweet.tweet %></p>
+                <p class="light center"><%- data.date %></p>
+              </div>
+              <div style="display: flex">
+                <input
+                  style="width: 100%"
+                  type="range"
+                  value="0"
+                  disabled
+                  id="id-<%- i %>"
+                  min="0"
+                  max="100"
+                />
+                <span id="id-perc-<%- i %>"></span>
+              </div>
+              <div class="flex full-width">
+                <i class="material-icons" onclick="deleteTweet('<%- i %>')"
+                  >delete</i
+                >
+              </div>
+              <script>
+                refreshTime(
+                  "<%- i %>",
+                  "<%- data.tweet.date %>",
+                  "<%- data.max %>"
+                );
+              </script>
+            </div>
+          </div>
+          <% }); %>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
