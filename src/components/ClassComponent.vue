@@ -35,32 +35,45 @@
           <div class="w100 flex">
             <q-btn label="Submit" type="submit" color="primary" />
             <q-btn label="Reset" type="reset" color="primary" flat class="q-ml-sm" />
-            <q-btn
-              :label="startedTweet ? 'Stop Timer' : 'Star Timer'"
-              type="button"
-              @click="starTimer()"
-              color="primary"
-              flat
-              class="q-ml-sm"
-            />
           </div>
         </q-form>
       </div>
     </div>
-    <q-table
-      class="w100"
-      title="Tweets"
-      :rows="rows"
-      :columns="columns"
-      row-key="tweet_id"
-    >
+    <q-table class="w100" title="JOBS" :rows="rows" :columns="columns" row-key="tweet_id">
       <template v-slot:body="props">
         <q-tr :props="props">
           <q-td key="tweet_id" :props="props">
             <q-btn round color="deep-orange" @click="deleteTweet(props)" icon="delete" />
+          </q-td>
+          <q-td key="send" :props="props">
             <q-btn round color="blue" @click="submit(props.row)" icon="send" />
           </q-td>
+          <q-td key="Tweet" :props="props"
+            ><q-btn
+              round
+              color="blue"
+              @click="submit(props.row, ['twitter'])"
+              icon="send"
+            />
+          </q-td>
+          <q-td key="IGPost" :props="props">
+            <q-btn
+              round
+              color="blue"
+              @click="submit(props.row, ['ig_post'])"
+              icon="send"
+            />
+          </q-td>
+          <q-td key="IGStory" :props="props">
+            <q-btn
+              round
+              color="blue"
+              @click="submit(props.row, ['ig_story'])"
+              icon="send"
+            />
+          </q-td>
           <q-td key="tweet" :props="props">
+            <img :src="props.row.file" style="max-width: 50px" />
             {{ props.row.tweet }}
             <q-popup-edit v-model="props.row.tweet">
               <q-input v-model="props.row.tweet" dense autofocus counter />
@@ -88,7 +101,7 @@
         </q-tr>
       </template>
     </q-table>
-    <div class="w100 q-mt-md" style="display: flex">
+    <!-- <div class="w100 q-mt-md" style="display: flex">
       <div class="w100">
         <q-btn label="Get streams" type="button" color="primary" @click="getReposts()" />
       </div>
@@ -103,39 +116,99 @@
           class="q-ml-sm"
         />
       </div>
-    </div>
+    </div> -->
     <div
       class="q-table__container q-table--horizontal-separator column no-wrap q-table__card q-table--no-wrap q-mt-md"
     >
+      <h5>Trend to Send</h5>
+      <q-btn
+        label="Send trends (3min)"
+        type="button"
+        @click="trendsToSend()"
+        color="primary"
+        class="q-ml-sm"
+      />
       <table class="q-table">
         <tr class="q-table__top" style="font-weight: bolder">
-          <td class="w100">Id</td>
+          <td>Id</td>
+          <td>Username</td>
+          <td>Followers</td>
+          <td>Following</td>
+          <td>Retweet</td>
+          <td>Like</td>
+          <td>Quote</td>
+          <td>Reply</td>
           <td></td>
-          <td></td>
+          <td style="max-width: 200px">Tweet</td>
         </tr>
-        <tr v-for="repost in reposts" v-bind:todo="repost" v-bind:key="repost">
-          <td>{{ repost }}</td>
-          <td>
-            <q-btn
-              label="Get list tweets"
-              type="button"
-              @click="getTweetReposts(repost)"
-              color="primary"
-              flat
-              class="q-ml-sm"
-            />
-          </td>
+        <tr v-for="(link, index) in listTweetTrendToSend" :key="index" v-bind="link">
+          <td>{{ listTweetTrendToSend[index].id }}</td>
+          <td>{{ listTweetTrendToSend[index].user?.screen_name }}</td>
+          <td>{{ listTweetTrendToSend[index].user?.followers_count }}</td>
+          <td>{{ listTweetTrendToSend[index].user?.friends_count }}</td>
+          <td>{{ listTweetTrendToSend[index].retweet_count }}</td>
+          <td>{{ listTweetTrendToSend[index].favorite_count }}</td>
+          <td>{{ listTweetTrendToSend[index].quote_count }}</td>
+          <td>{{ listTweetTrendToSend[index].reply_count }}</td>
           <td>
             <q-btn
               round
               color="deep-orange"
-              @click="deleteARepost(repost)"
+              @click="removeToTrendsToSend(index)"
               icon="delete"
             />
+            <q-btn
+              round
+              color="blue"
+              @click="sendTweet(listTweetTrendToSend[index])"
+              icon="send"
+            />
+          </td>
+          <td>
+            <img
+              v-if="
+                listTweetTrendToSend[index].extended_entities &&
+                listTweetTrendToSend[index].extended_entities.media &&
+                listTweetTrendToSend[index].extended_entities.media[0]
+                  ? listTweetTrendToSend[index].extended_entities.media[0].media_url_https
+                  : ''
+              "
+              :src="
+                listTweetTrendToSend[index].extended_entities?.media[0].media_url_https
+              "
+            />
+            <span>
+              {{ listTweetTrendToSend[index].text }}
+            </span>
           </td>
         </tr>
       </table>
     </div>
+    <div class="w100 q-mt-md">
+      <q-btn
+        :label="startedTweet ? 'Stop Timer' : 'Star Timer'"
+        type="button"
+        @click="starTimer()"
+        color="primary"
+        flat
+        class="q-ml-sm"
+      />
+      <q-btn
+        label="Get trend and send"
+        type="button"
+        @click="getTweetsAndPostIt(1)"
+        color="primary"
+        class="q-ml-sm"
+      />
+      <q-btn
+        label="Get trend"
+        type="button"
+        @click="getTweetsAndPostIt(1, false)"
+        color="primary"
+        class="q-ml-sm"
+      />
+    </div>
+
     <div
       class="q-table__container q-table--horizontal-separator column no-wrap q-table__card q-table--no-wrap q-mt-md"
     >
@@ -152,15 +225,15 @@
           <td></td>
           <td style="max-width: 200px">Tweet</td>
         </tr>
-        <tr v-for="(link, index) in listTweetStrem" :key="index" v-bind="link">
-          <td>{{ listTweetStrem[index].id }}</td>
-          <td>{{ listTweetStrem[index].user.screen_name }}</td>
-          <td>{{ listTweetStrem[index].user.followers_count }}</td>
-          <td>{{ listTweetStrem[index].user.friends_count }}</td>
-          <td>{{ listTweetStrem[index].retweet_count }}</td>
-          <td>{{ listTweetStrem[index].favorite_count }}</td>
-          <td>{{ listTweetStrem[index].quote_count }}</td>
-          <td>{{ listTweetStrem[index].reply_count }}</td>
+        <tr v-for="(link, index) in listTweetTrend" :key="index" v-bind="link">
+          <td>{{ listTweetTrend[index].id }}</td>
+          <td>{{ listTweetTrend[index].user.screen_name }}</td>
+          <td>{{ listTweetTrend[index].user.followers_count }}</td>
+          <td>{{ listTweetTrend[index].user.friends_count }}</td>
+          <td>{{ listTweetTrend[index].retweet_count }}</td>
+          <td>{{ listTweetTrend[index].favorite_count }}</td>
+          <td>{{ listTweetTrend[index].quote_count }}</td>
+          <td>{{ listTweetTrend[index].reply_count }}</td>
           <td>
             <q-btn
               round
@@ -171,23 +244,35 @@
             <q-btn
               round
               color="blue"
-              @click="sendTweet(listTweetStrem[index])"
+              @click="sendTweet(listTweetTrend[index])"
               icon="send"
+            />
+            <q-btn
+              round
+              color="green"
+              @click="addToTrendsToSend(listTweetTrend[index])"
+              icon="add"
             />
           </td>
           <td>
+            <img
+              :src="listTweetTrend[index].extended_entities.media[0].media_url_https"
+            />
             <span>
-              {{ listTweetStrem[index].text }}
+              {{ listTweetTrend[index].text }}
             </span>
           </td>
         </tr>
       </table>
     </div>
+
+    <br /><br /><br />
+
     <div
       v-if="tweetToSend && tweetToSend.user"
       style="
         background: #42b983;
-        padding: 4rem;
+        padding: 1rem;
         display: flex;
         justify-content: center;
         align-items: center;
@@ -196,7 +281,7 @@
       <div
         id="tweet_to_send"
         style="
-          padding: 4rem;
+          padding: 1rem;
           background: #42b983;
           width: 1000px;
           height: 1000px;
@@ -205,7 +290,10 @@
           align-items: center;
         "
       >
-        <img :src="tweetToSend?.file_tweet" style="width: 80%" />
+        <img
+          :src="tweetToSend?.file_tweet"
+          style="max-width: 1000px; max-height: 1000px; width: 100%"
+        />
         <!-- <div class="tweet" style="margin: 2rem; min-width: 700px">
           <div class="box">
             <article class="media">
@@ -261,7 +349,8 @@ export default class ClassComponent extends Vue.with(Props) {
 
   reposts: string[] = [];
 
-  listTweetStrem: any = [];
+  listTweetTrend: any = [];
+  listTweetTrendToSend: any = [];
   ID_TWITTER = "francupen";
 
   instagramPost = false;
@@ -281,6 +370,31 @@ export default class ClassComponent extends Vue.with(Props) {
       label: "Delete",
       align: "left",
       field: (row: any) => row.tweet_id,
+    },
+    {
+      name: "send",
+      required: true,
+      label: "Send",
+      align: "left",
+      field: (row: any) => row.tweet_id,
+    },
+    {
+      name: "Tweet",
+      required: true,
+      label: "Tweet",
+      align: "left",
+    },
+    {
+      name: "IGPost",
+      required: true,
+      label: "IG Post",
+      align: "left",
+    },
+    {
+      name: "IGStory",
+      required: true,
+      label: "IG Story",
+      align: "left",
     },
     {
       name: "tweet",
@@ -345,12 +459,12 @@ export default class ClassComponent extends Vue.with(Props) {
     this.events.splice(rowIndex, 1);
     this.rows.splice(rowIndex, 1);
 
-    this._delete("api", "/tweets/" + rowIndex).then((d) => {
+    this._delete("twitter", "/job/" + rowIndex).then((d) => {
       this.events = [];
-      d.tweets.forEach((t: any) => {
+      d.forEach((t: any) => {
         this.events.push(t.qdate);
       });
-      this.rows = d.tweets;
+      this.rows = d;
       this.showNotif(props.row.tweet);
     });
   }
@@ -402,12 +516,12 @@ export default class ClassComponent extends Vue.with(Props) {
         this.days = [];
         this.time = "12:00";
         this.tweet = "";
-        this._post("api", "/tweets", rows).then((d) => {
+        this._post("twitter", "/job/add", rows).then((d) => {
           this.events = [];
-          d.tweets.forEach((t: any) => {
+          d.forEach((t: any) => {
             this.events.push(t.qdate);
           });
-          this.rows = d.tweets;
+          this.rows = d;
         });
       };
       reader.onerror = (error) => {
@@ -431,79 +545,37 @@ export default class ClassComponent extends Vue.with(Props) {
       this.days = [];
       this.time = "12:00";
       this.tweet = "";
-      this._post("api", "/tweets", rows).then((d) => {
+      this._post("twitter", "/job/add", rows).then((d) => {
         this.events = [];
-        d.tweets.forEach((t: any) => {
+        d.forEach((t: any) => {
           this.events.push(t.qdate);
         });
-        this.rows = d.tweets;
+        this.rows = d;
       });
     }
   }
 
   refreshTweets() {
-    this._get("api").then((d) => {
-      d.tweets.forEach((t: any) => {
+    this._get("twitter", "/job/get").then((d) => {
+      d.forEach((t: any) => {
         this.events.push(t.qdate);
       });
-      this.rows = d.tweets;
+      this.rows = d;
     });
   }
   created() {
     this.refreshTweets();
+    this.getJobsTrends();
   }
   starTimer() {
-    const timezone = 1000 * 60 * 60;
     let timer: any;
     let timerReposts: any;
 
     if (!this.startedTweet) {
-      // let idTimerRepost: any = localStorage.getItem("idTimerRepost");
       // idTimerRepost = !idTimerRepost ? 0 : Number(idTimerRepost);
       timerReposts = setInterval(() => {
-        // this._get("twitter", "/repost/accounts").then((d) => {
-        //   console.log(d);
-        //   this.reposts = d;
-        //   if (!d[idTimerRepost]) {
-        //     idTimerRepost = 0;
-        //   }
-        //   const currentRepost = d[idTimerRepost];
-        //   console.log(currentRepost);
-        //   this._get("twitter", "/repost/tweets/" + currentRepost).then((d) => {
-        //     console.log(d);
-        //     this.listTweetStrem = d;
-        //     localStorage.setItem("idTimerRepost", ++idTimerRepost + "");
-        //     this.sendTweet(d[0]);
-        //   });
-        // });
-        this._get("twitter", "/repost/tweets/" + 1).then((d) => {
-          const tws_filter = d.filter(
-            (tw: any) =>
-              tw.extended_entities &&
-              tw.extended_entities.media &&
-              tw.extended_entities.media.length > 0 &&
-              !tw.retweeted_status &&
-              !tw.truncated &&
-              !tw.is_quote_status &&
-              tw.text.includes("https://t.co/")
-          );
-          // console.log(tws_filter);
-          // localStorage.setItem("idTimerRepost", ++idTimerRepost + "");
-          let max = -Infinity;
-          let maxTweet: any = {};
-          tws_filter.forEach((dd: any) => {
-            if (dd.user.followers_count > max) {
-              max = dd.user.followers_count;
-              maxTweet = dd;
-              maxTweet.file_tweet = dd.extended_entities.media[0].media_url_https;
-              maxTweet.text_bk = maxTweet.text;
-              maxTweet.text =
-                "#NFT #NFTs #NFTCommunity #NFTGiveaway #NFTdrop #nftart #ETH #opensea #like #RT #follow #trend " +
-                ("https://t.co/" + dd.text.split("https://t.co/")[1]);
-            }
-          });
-          this.sendTweet(maxTweet);
-        });
+        // CHECK TRENDS
+        this.getTweetsAndPostIt(1);
       }, 1000 * 60 * 3);
     } else {
       clearInterval(timerReposts);
@@ -511,54 +583,139 @@ export default class ClassComponent extends Vue.with(Props) {
     if (!this.startedTweet) {
       this.startedTweet = true;
       timer = setInterval(() => {
-        this.rows.forEach((t: any, i: number) => {
-          const left = new Date(t.date).getTime() - new Date().getTime() - timezone;
-          if (left < 0 && left + 1000 * 60 * 10 > 0) {
-            if (t.file) {
-              var formData = new FormData();
-              formData.append("tweet", t.tweet);
-              formData.append("altText", t.tweet);
-              // HTML file input user's choice...
-              formData.append("media_data", t.file);
-              var request = new XMLHttpRequest();
-              request.open("POST", "http://localhost:3000/twitter/media");
-              request.onreadystatechange = () => {
-                if (
-                  request.readyState === XMLHttpRequest.DONE &&
-                  request.status === 200
-                ) {
-                  this.deleteTweet({ rowIndex: i, row: { tweet: t.tweet } });
-                }
-              };
-              request.send(formData);
-
-              var formData2 = new FormData();
-              formData2.append("tweet", t.tweet);
-              formData2.append("media_data", t.file);
-              var request2 = new XMLHttpRequest();
-              request2.open("POST", "http://localhost:3001/instagram/post-photo");
-              request2.onreadystatechange = () => {
-                if (
-                  request2.readyState === XMLHttpRequest.DONE &&
-                  request2.status === 200
-                ) {
-                  // SUCCESS
-                }
-              };
-              request2.send(formData2);
-            } else {
-              this._post("twitter", "", { tweet: t.tweet }).then((d) => {
-                this.deleteTweet({ rowIndex: i, row: { tweet: t.tweet } });
-              });
-            }
-          }
-        });
-        // this.getReposts();
+        // CHECK JOBS
+        this.getTweetsAndPostIt(2);
       }, 10000);
     } else {
       this.startedTweet = false;
       clearInterval(timer);
     }
+  }
+  getTweetsAndPostIt(part = 0, send = true) {
+    const timezone = 1000 * 60 * 60;
+    if (part === 1) {
+      // this._get("twitter", "/repost/accounts").then((d) => {
+      //   console.log(d);
+      //   this.reposts = d;
+      //   if (!d[idTimerRepost]) {
+      //     idTimerRepost = 0;
+      //   }
+      //   const currentRepost = d[idTimerRepost];
+      //   console.log(currentRepost);
+      //   this._get("twitter", "/repost/tweets/" + currentRepost).then((d) => {
+      //     console.log(d);
+      //     this.listTweetStrem = d;
+      //     this.sendTweet(d[0]);
+      //   });
+      // });
+      this._get("twitter", "/repost/tweets/" + 1).then((d) => {
+        const tws_filter = d.filter(
+          (tw: any) =>
+            tw.extended_entities &&
+            tw.extended_entities.media &&
+            tw.extended_entities.media.length > 0 &&
+            !tw.retweeted_status &&
+            !tw.truncated &&
+            !tw.is_quote_status &&
+            tw.text.includes("https://t.co/")
+        );
+        this.listTweetTrend = tws_filter;
+        console.log(tws_filter);
+        let max = -Infinity;
+        let maxTweet: any = {};
+        tws_filter.forEach((dd: any) => {
+          if (dd.user.followers_count > max) {
+            max = dd.user.followers_count;
+            maxTweet = dd;
+          }
+        });
+        if (send) {
+          // this.sendTweet(maxTweet);
+        }
+      });
+    }
+    if (part === 2) {
+      // REVISAR LOS JOBS PENDIENTES
+      this.rows.forEach((t: any, i: number) => {
+        const left = new Date(t.date).getTime() - new Date().getTime() - timezone;
+        if (left < 0 && left + 1000 * 60 * 10 > 0) {
+          if (t.file) {
+            var formData = new FormData();
+            formData.append("tweet", t.tweet);
+            formData.append("altText", t.tweet);
+            // HTML file input user's choice...
+            formData.append("media_data", t.file);
+            var request = new XMLHttpRequest();
+            request.open("POST", "http://localhost:3000/twitter/media");
+            request.onreadystatechange = () => {
+              if (request.readyState === XMLHttpRequest.DONE && request.status === 200) {
+                this.deleteTweet({ rowIndex: i, row: { tweet: t.tweet } });
+              }
+            };
+            if (send) {
+              request.send(formData);
+            }
+            var formData2 = new FormData();
+            formData2.append("tweet", t.tweet);
+            formData2.append("media_data", t.file);
+            var request2 = new XMLHttpRequest();
+            request2.open("POST", "http://localhost:3001/instagram/post-photo");
+            request2.onreadystatechange = () => {
+              if (
+                request2.readyState === XMLHttpRequest.DONE &&
+                request2.status === 200
+              ) {
+                // SUCCESS
+              }
+            };
+            if (send) {
+              request2.send(formData2);
+            }
+            this.deleteTweet({ rowIndex: i, row: { tweet: t.tweet } });
+          } else {
+            this._post("twitter", "", { tweet: t.tweet }).then((d) => {
+              this.deleteTweet({ rowIndex: i, row: { tweet: t.tweet } });
+            });
+          }
+        }
+      });
+      // this.getReposts();
+    }
+  }
+
+  addToTrendsToSend(tweet: any) {
+    this.listTweetTrendToSend.push(tweet);
+    this._post("twitter", "/jobtrend/add", [tweet]).then((d) => {
+      this.listTweetTrendToSend = d;
+    });
+  }
+  removeToTrendsToSend(i: any) {
+    this._delete("twitter", "/jobtrend/" + i).then((d) => {
+      this.listTweetTrendToSend = d;
+    });
+  }
+  getJobsTrends() {
+    this._get("twitter", "/jobtrend/get").then((d) => {
+      this.listTweetTrendToSend = d;
+    });
+  }
+  trendsToSend() {
+    setInterval(() => {
+      // CHECK JOBS
+      const send = this.listTweetTrendToSend.splice(0, 1);
+      if (send && send[0]) {
+        this.sendTweet(send[0]);
+        this.removeToTrendsToSend(0);
+      }
+    }, 10000);
+  }
+  formatSend(maxTweet: any, dd: any) {
+    maxTweet.file_tweet = dd.extended_entities.media[0].media_url_https;
+    maxTweet.text_bk = maxTweet.text;
+    maxTweet.text =
+      "#NFT #NFTs #NFTCommunity #NFTGiveaway #NFTdrop #nftart #ETH #opensea #like #RT #follow #trend " +
+      ("https://t.co/" + dd.text.split("https://t.co/")[1]);
+    return maxTweet;
   }
   submit(t: any, networks = ["twitter", "ig_post", "ig_story"]) {
     if (t.file) {
@@ -618,6 +775,7 @@ export default class ClassComponent extends Vue.with(Props) {
   }
 
   sendTweet(tweet: any) {
+    tweet = this.formatSend(tweet, tweet);
     this.tweetToSend = tweet;
     this.submit(
       {
@@ -676,13 +834,13 @@ export default class ClassComponent extends Vue.with(Props) {
   getTweetReposts(id: string) {
     this._get("twitter", "/repost/tweets/" + id).then((d) => {
       // console.log(d);
-      this.listTweetStrem = d;
+      this.listTweetTrend = d;
     });
   }
   deleteATweetReposts(id: number) {
     this._delete("twitter", "/repost/tweets/" + id).then((d) => {
       // console.log(d);
-      this.listTweetStrem = d;
+      this.listTweetTrend = d;
     });
   }
 

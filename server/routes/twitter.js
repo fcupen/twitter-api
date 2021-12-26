@@ -136,7 +136,106 @@ router.delete("/repost/accounts/:id", (req, res, next) => {
   });
 });
 
-/* POST A TWEET. */
+/* POST JOB. */
+router.post("/job/add", (req, res, next) => {
+  var body = req.body;
+  fs.readFile("./db/db.json", (err, data) => {
+    let db = JSON.parse(data);
+    if (!db.job) {
+      db.job = [];
+    }
+    db.job.push(...body);
+    fs.writeFile(
+      "./db/db.json",
+      JSON.stringify({
+        ...db,
+        job: db.job,
+      }),
+      (err) => {
+        if (err) throw err;
+        res.json(db.job);
+      }
+    );
+  });
+});
+/* GET JOBS. */
+router.get("/job/get", (req, res, next) => {
+  fs.readFile("./db/db.json", (err, data) => {
+    let db = JSON.parse(data);
+    if (!db.job) {
+      db.job = [];
+    }
+    res.json(db.job);
+  });
+});
+router.delete("/job/:id", function (req, res, next) {
+  const id = req.params.id;
+  const key = 'job';
+  fs.readFile("./db/db.json", (err, data) => {
+    let db = JSON.parse(data);
+    db[key].splice(id, 1);
+    fs.writeFile(
+      "./db/db.json",
+      JSON.stringify({ ...db, [key]: db[key] }),
+      (err) => {
+        if (err) throw err;
+        res.json({ ...db, [key]: db[key] });
+      }
+    );
+  });
+});
+
+
+/* POST jobtrend. */
+router.post("/jobtrend/add", (req, res, next) => {
+  var body = req.body;
+  fs.readFile("./db/db.json", (err, data) => {
+    let db = JSON.parse(data);
+    if (!db.jobtrend) {
+      db.jobtrend = [];
+    }
+    db.jobtrend.push(...body);
+    fs.writeFile(
+      "./db/db.json",
+      JSON.stringify({
+        ...db,
+        jobtrend: db.jobtrend,
+      }),
+      (err) => {
+        if (err) throw err;
+        res.json(db.jobtrend);
+      }
+    );
+  });
+});
+/* GET jobtrend. */
+router.get("/jobtrend/get", (req, res, next) => {
+  fs.readFile("./db/db.json", (err, data) => {
+    let db = JSON.parse(data);
+    if (!db.jobtrend) {
+      db.jobtrend = [];
+    }
+    res.json(db.jobtrend);
+  });
+});
+router.delete("/jobtrend/:id", function (req, res, next) {
+  const id = req.params.id;
+  const key = 'jobtrend';
+  fs.readFile("./db/db.json", (err, data) => {
+    let db = JSON.parse(data);
+    db[key].splice(id, 1);
+    fs.writeFile(
+      "./db/db.json",
+      JSON.stringify({ ...db, [key]: db[key] }),
+      (err) => {
+        if (err) throw err;
+        res.json(db[key]);
+      }
+    );
+  });
+});
+
+/* POST A ACCOUNT. */
 router.post("/repost/accounts", (req, res, next) => {
   var body = req.body;
   fs.readFile("./db/db.json", (err, data) => {
@@ -162,7 +261,7 @@ router.post("/repost/accounts", (req, res, next) => {
     }
   });
 });
-/* POST A TWEET. */
+/* GET ACCOUNTS. */
 router.get("/repost/accounts", (req, res, next) => {
   fs.readFile("./db/db.json", (err, data) => {
     let db = JSON.parse(data);
